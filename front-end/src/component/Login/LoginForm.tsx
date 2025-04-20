@@ -21,6 +21,7 @@ const LoginForm: React.FC = () => {
         const response = await axios.get("http://localhost:5000/chats", {
           withCredentials: true,
         });
+        navigate("/chats");
         console.log("Auto-logged in!", response.data);
       } catch (error) {
         console.log("Error fetching chats:", error);
@@ -49,11 +50,13 @@ const LoginForm: React.FC = () => {
   let formHandler=async (event)=>{
     event.preventDefault();
     try {
-      const response= await axios.post("http://localhost:5000/login",formdata)
+      const response= await axios.post("http://localhost:5000/login", formdata, {
+        withCredentials: true,
+      })
       console.log(response);
       if(response.data.success)
       {
-        
+        console.log(document.cookie)
         navigate('/chats')
       }
     } catch (error) {

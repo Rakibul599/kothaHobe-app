@@ -49,8 +49,8 @@ async function loggedIn(req,res,next) {
     }
    
 }
-function loginAuth(req,res,next){
-    return req.status(200).json({ msg: "You are authenticated", user: req.user });
+function loginAuth(req, res, next) {
+    res.status(200).json({ msg: "You are authenticated", user: req.user });
 }
 
 module.exports={
