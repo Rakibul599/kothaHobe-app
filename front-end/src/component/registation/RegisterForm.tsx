@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState } from "react";
 import { data, Link } from "react-router-dom";
 
@@ -42,13 +43,21 @@ const RegisterForm: React.FC = () => {
     // let na={name:"fdhf"}
     
     try {
-      let response = await fetch("http://localhost:5000//registration", {
-        method: "POST",
-        body: formData,
+      const response = await axios.post('http://localhost:5000/registration', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
+    
+      const result = response.data;
+      console.log(response.data)
+      // let response = await fetch("http://localhost:5000//registration", {
+      //   method: "POST",
+      //   body: formData,
+      // });
 
-      // get response
-      let result = await response.json();
+      // // get response
+      // let result = await response.json();
       if (result.errors) {
         setErrorMsg({
           name: result.errors.name?.msg || "",

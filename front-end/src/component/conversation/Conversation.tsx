@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getUrlimg } from "../../utils/GetUrlImg";
 
-function Conversation() {
+function Conversation({conversationInfo,setconversation}) {
   const [isSender, setSender] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
@@ -26,7 +26,7 @@ function Conversation() {
     <div className="h-[100vh] bg-[#ffffff]">
       <div className="grid grid-cols-[70px_auto] gap-2.5 items-center m-1.5">
         <img src={getUrlimg("man.png")} className="h-15 w-15 rounded-[100%]" alt="" />
-        <h1 className="font-bold">Rakibul Alam</h1>
+        <h1 className="font-bold">{conversationInfo.name}</h1>
       </div>
 
       {/* Conversation */}

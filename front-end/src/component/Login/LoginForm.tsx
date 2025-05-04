@@ -30,15 +30,6 @@ const LoginForm: React.FC = () => {
     };
 
     fetchChats();
-    // axios
-    //   .get("http://localhost:5000/chats", { withCredentials: true }) // 👈 this sends the cookie
-    //   .then((res) => {
-    //     console.log("Auto-logged in!", res.data);
-    //   })
-    //   .catch(() => {
-    //     // Not logged in
-    //     navigate("/");
-    //   });
   }, []);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
