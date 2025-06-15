@@ -17,7 +17,7 @@ async function loggedIn(req,res,next) {
                     userid: user._id,
                     username: user.name,
                     email: user.email,
-                    avatar: user.avatar || null,
+                    avatar: user.avater ?? null,
                   };
 
                   const token = jwt.sign(userObject, process.env.JWT_SECRET, {

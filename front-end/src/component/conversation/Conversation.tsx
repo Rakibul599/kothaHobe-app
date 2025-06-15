@@ -1,18 +1,41 @@
 import { useState } from "react";
 import { getUrlimg } from "../../utils/GetUrlImg";
+import axios from "axios";
 
-function Conversation({conversationInfo,setconversation}) {
-  const [isSender, setSender] = useState(false);
+function Conversation({
+  conversationInfo,
+  setconversation,
+  converstionchats,
+  setConversationchats,
+  userId,
+  setUserid,
+  refresh,
+  setRefresh,
+}) {
+  const [isSender, setSender] = useState(true);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [file, setFile] = useState(null); // for storing the selected file
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
+    console.log(converstionchats);
+    setRefresh(!refresh);
     if (message.trim() === "" && !file) return;
-
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/chats/sendmessage",
+        { message, conversationInfo },
+        {
+          withCredentials: true,
+        }
+      );
+    } catch (error) {
+      console.log(error);
+    }
     // Push message and/or file
-    setMessages([...messages, { text: message, file: file, sender: isSender }]);
+    // setMessages([...messages, { text: message, file: file, sender: isSender }]);
+    setConversationchats([...converstionchats,{ text: message, file: file, sender: { id: userId } }])
     setMessage("");
     setFile(null);
     setSender(!isSender);
@@ -25,18 +48,24 @@ function Conversation({conversationInfo,setconversation}) {
   return (
     <div className="h-[100vh] bg-[#ffffff]">
       <div className="grid grid-cols-[70px_auto] gap-2.5 items-center m-1.5">
-        <img src={getUrlimg("man.png")} className="h-15 w-15 rounded-[100%]" alt="" />
+        <img
+          src={getUrlimg("man.png")}
+          className="h-15 w-15 rounded-[100%]"
+          alt=""
+        />
         <h1 className="font-bold">{conversationInfo.name}</h1>
       </div>
 
       {/* Conversation */}
       <div>
         <div className="bg-[#f0f0f3] h-[78vh] m-[0px_10px_0px_10px] p-3 overflow-y-scroll rounded-md">
-          {messages.map((msg, index) => (
+          {converstionchats.map((msg, index) => (
             <div
               key={index}
               className={`max-w-[50%] p-2 m-2 rounded-xl ${
-                msg.sender ? "bg-blue-500 text-white ml-auto" : "bg-gray-300 text-black"
+                msg.sender.id == userId
+                  ? "bg-blue-500 text-white ml-auto"
+                  : "bg-gray-300 text-black"
               }`}
             >
               {msg.text && <div>{msg.text}</div>}
