@@ -1,10 +1,11 @@
 import axios from "axios";
 import React, { useState } from "react";
-import { data, Link } from "react-router-dom";
+import { data, Link, useNavigate } from "react-router-dom";
 
 const RegisterForm: React.FC = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<{
     name: string;
     email: string;
@@ -50,6 +51,7 @@ const RegisterForm: React.FC = () => {
       });
     
       const result = response.data;
+      const uid=result.id;
       console.log(response.data)
       // let response = await fetch("http://localhost:5000//registration", {
       //   method: "POST",
@@ -58,7 +60,7 @@ const RegisterForm: React.FC = () => {
 
       // // get response
       // let result = await response.json();
-      if (result.errors) {
+      if (response.status !== 200) {
         setErrorMsg({
           name: result.errors.name?.msg || "",
           email: result.errors.email?.msg || "",
@@ -66,7 +68,8 @@ const RegisterForm: React.FC = () => {
           avatar: result.errors.avatar?.msg || "",
         });
       } else {
-        alert("Registration successfully");
+        navigate(`/verify/${uid}`);
+        // alert("Registration successfully");
       }
       // console.log(result.errors.password.msg)
       console.log(errorMsg.password);

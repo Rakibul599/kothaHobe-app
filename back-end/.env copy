@@ -4,5 +4,5 @@ JWT_SECRET="hhhdjjsndjf"
 COOKIE_SECRET=Kothaobe
 JWT_EXPIRY=86400000
 COOKIE_NAME=KothaHobe
-APP_PASSWORD=iwho obbf cknp dppe
+APP_PASSWORD=your password
 EMAIL=kothahobeapp@gmail.com

@@ -21,7 +21,17 @@ const peopleSchema = mongoose.Schema(
     },
     remember:{
         type:Boolean,
-    }
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationCode: {
+      type: String,
+    },
+    verificationCodeExpires: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
