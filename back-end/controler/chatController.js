@@ -98,14 +98,14 @@ async function conversationItem(req, res, next) {
   try {
     const userId = req.user.userid;
 
-    // Step 1: Find all conversations for the current user
+    // Find all conversations for the current user
     const conversations = await Conversation.find({
       $or: [{ "creator.id": userId }, { "participant.id": userId }],
     });
 
     const conversationIds = conversations.map((c) => c._id);
 
-    // Step 2: Aggregate messages to get latest message time for each conversation
+    // Aggregate messages to get latest message time for each conversation
     const latestMessages = await Message.aggregate([
       { $match: { conversation_id: { $in: conversationIds } } },
       { $sort: { date_time: -1 } },
@@ -118,7 +118,7 @@ async function conversationItem(req, res, next) {
       },
     ]);
 
-    // Step 3: Merge latest message info with conversations
+    //Merge latest message info with conversations
     const merged = conversations.map((conv) => {
       const match = latestMessages.find(
         (msg) => String(msg._id) === String(conv._id)
@@ -130,7 +130,7 @@ async function conversationItem(req, res, next) {
       };
     });
 
-    // Step 4: Sort by lastMessageTime (descending)
+    // Sort by lastMessageTime (descending)
     merged.sort(
       (a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime)
     );
@@ -164,8 +164,27 @@ async function sendMessage(req, res, next) {
         conversation_id: req.body.conversationInfo.con_id,
       });
       const result = await messages.save();
+      console.log("hello1");
+      // handle live message
+      let _id=req.body.conversationInfo.con_id;
+      
+      const message={
+        conversation_id: _id,
+        sender: {
+          id: req.user.userid,
+          name: req.user.username,
+          avatar: req.user.avatar || null,
+        },
+        message: req.body.message,
+        attachment: attachments,
+        date_time: result.date_time,
+      }
+      console.log(message.conversation_id)
+      global.io.emit("new_message", {message,});
+      console.log("hello");
       return res.status(200).json({ msg: "success", data: result });
     } catch (error) {
+      console.log(error);
       res.status(500).json({ err: error });
     }
   } else {

@@ -1,4 +1,5 @@
 const express=require('express');
+const http=require('http');
 const dotenv=require('dotenv');
 const mongoose=require('mongoose');
 const cookieParser = require("cookie-parser");
@@ -11,8 +12,20 @@ const path=require('path')
 
 
 const app=express();
+const server=http.createServer(app);
 
 dotenv.config();
+
+// socket creation
+// const io = require("socket.io")(server);
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "http://localhost:5173", // your frontend
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+global.io = io;
 //database connection
 mongoose.connect(process.env.MONGOOSE_CONNECTION_STRING)
 .then(()=>console.log("Database connected"))
@@ -39,6 +52,6 @@ app.use((req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ message: err.message || 'Something went wrong!' });
   });
-app.listen(process.env.PORT,()=>{
+server.listen(process.env.PORT,()=>{
     console.log(`app listening port ${process.env.PORT}`)
 })

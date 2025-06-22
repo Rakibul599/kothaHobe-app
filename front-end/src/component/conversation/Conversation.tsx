@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getUrlimg } from "../../utils/GetUrlImg";
 import axios from "axios";
+import { io } from "socket.io-client";
+import LeftMenu from "../leftMenu/LeftMenu";
+
+const socket = io("http://localhost:5000", {
+  withCredentials: true,
+});
 
 function Conversation({
   conversationInfo,
@@ -11,35 +17,79 @@ function Conversation({
   setUserid,
   refresh,
   setRefresh,
+  setTab,
 }) {
   const [isSender, setSender] = useState(true);
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [file, setFile] = useState(null); // for storing the selected file
+  const [file, setFile] = useState(null);
+
+  const messagesEndRef = useRef(null);
+  const isInitialLoad = useRef(true); //To detect if it's the first load
+
+  const scrollToBottom = (smooth = false) => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: smooth ? "smooth" : "auto", //Scroll behavior: smooth or instant
+    });
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
-    console.log(converstionchats);
     setRefresh(!refresh);
     if (message.trim() === "" && !file) return;
+
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:5000/chats/sendmessage",
         { message, conversationInfo },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
     } catch (error) {
       console.log(error);
     }
-    // Push message and/or file
-    // setMessages([...messages, { text: message, file: file, sender: isSender }]);
-    setConversationchats([...converstionchats,{ text: message, file: file, sender: { id: userId } }])
+
+    setConversationchats([
+      ...converstionchats,
+      { text: message, file: file, sender: { id: userId } },
+    ]);
+
     setMessage("");
     setFile(null);
     setSender(!isSender);
   };
+
+  useEffect(() => {
+    socket.on("new_message", (data) => {
+      if (data.message.conversation_id === conversationInfo.con_id) {
+        setConversationchats((prev) => [
+          ...prev,
+          {
+            text: data.message.message,
+            sender: { id: data.message.sender.id },
+            file: null,
+          },
+        ]);
+      }
+    });
+
+    return () => {
+      socket.off("new_message");
+    };
+  }, [conversationInfo]);
+
+  // Scroll when messages change
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      scrollToBottom(!isInitialLoad.current); // smooth only if not first load
+      isInitialLoad.current = false; // After first render
+    }, 50);
+
+    return () => clearTimeout(timeout);
+  }, [converstionchats]);
+
+  // Reset scroll mode on new conversation
+  useEffect(() => {
+    isInitialLoad.current = true;
+  }, [conversationInfo]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -47,7 +97,13 @@ function Conversation({
 
   return (
     <div className="h-[100vh] bg-[#ffffff]">
-      <div className="grid grid-cols-[70px_auto] gap-2.5 items-center m-1.5">
+      <div className="grid grid-cols-[20px_70px_auto] md:grid-cols-[70px_auto] gap-2.5 items-center m-1.5">
+        <img
+          src={getUrlimg("back.png")}
+          className="block md:hidden "
+          onClick={() => setTab(false)}
+          alt=""
+        />
         <img
           src={getUrlimg("man.png")}
           className="h-15 w-15 rounded-[100%]"
@@ -56,9 +112,8 @@ function Conversation({
         <h1 className="font-bold">{conversationInfo.name}</h1>
       </div>
 
-      {/* Conversation */}
       <div>
-        <div className="bg-[#f0f0f3] h-[78vh] m-[0px_10px_0px_10px] p-3 overflow-y-scroll rounded-md">
+        <div className="bg-[#f0f0f3] md:h-[75vh] h-[84vh] m-[0px_10px_0px_10px] p-3 overflow-y-scroll rounded-md">
           {converstionchats.map((msg, index) => (
             <div
               key={index}
@@ -90,12 +145,13 @@ function Conversation({
               )}
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
 
         <div>
           <form
             onSubmit={handleSend}
-            className="grid grid-cols-[5%_85%_auto] gap-5 mt-3 ml-10 items-center"
+            className="grid md:grid-cols-[5%_85%_auto] grid-cols-[5%_70%_auto] gap-5 mt-3 ml-10 items-center"
           >
             <label htmlFor="file-upload">
               <img
@@ -111,9 +167,15 @@ function Conversation({
               className="hidden"
             />
 
-            <input
+            {/* <input
               type="text"
               className="bg-[#f0f0f3] h-[40px] px-2 rounded-md"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message"
+            /> */}
+            <textarea
+              className="bg-[#f0f0f3] min-h-[30px] max-h-[120px] px-2 py-1 rounded-md w-full resize-none overflow-y-auto break-words"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message"
@@ -129,6 +191,7 @@ function Conversation({
           </form>
         </div>
       </div>
+      {/* <LeftMenu /> */}
     </div>
   );
 }

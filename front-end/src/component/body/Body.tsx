@@ -7,6 +7,7 @@ import axios from "axios";
 
 function Body() {
   const navigate = useNavigate();
+  const [tab,setTab]=useState<boolean>(false);
   useEffect(() => {
     const fetchChats = async () => {
       try {
@@ -35,19 +36,37 @@ function Body() {
   const [refresh, setRefresh] = useState<boolean>(false);
   const [userId, setUserid] = useState();
   return (
-    <div className="grid grid-cols-[70px_400px_auto]  ">
-      {/* Left side bar */}
+    <div className="grid md:grid-cols-[70px_400px_auto] grid-cols-[auto]">
+    {/* Left sidebar */}
+    <div className="md:order-1 order-2">
       <LeftMenu />
-      {/*chat item*/}
+    </div>
+  
+    {/* Chat List */}
+    <div
+      className={`md:order-2 order-1 ${
+        tab ? "hidden" : "block"
+      } md:block`}
+    >
       <Chat
-        setconversation={setconversation}
+        setconversation={(info) => {
+          setconversation(info);
+          setTab(true); // Activate tab on click
+        }}
         setConversationchats={setConversationchats}
         userId={userId}
         setUserid={setUserid}
         refresh={refresh}
         setRefresh={setRefresh}
       />
-      {/* Chat view */}
+    </div>
+  
+    {/* Conversation Panel */}
+    <div
+      className={`order-3 ${
+        tab ? "block" : "hidden"
+      } md:block`}
+    >
       <Conversation
         conversationInfo={conversationInfo}
         setconversation={setconversation}
@@ -57,9 +76,11 @@ function Body() {
         setUserid={setUserid}
         refresh={refresh}
         setRefresh={setRefresh}
-
+        setTab={setTab}
       />
     </div>
+  </div>
+  
   );
 }
 
