@@ -13,7 +13,7 @@ function Chat({setconversation,setConversationchats,userId,setUserid,refresh,set
   useEffect(() => {
     const fetchChatConversion = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/chats/conversationitem', {
+        const response = await axios.get(`${import.meta.env.VITE_API}/chats/conversationitem`, {
           withCredentials: true,
         });
         setconversationData(response.data.conversation)

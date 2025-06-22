@@ -14,7 +14,7 @@ const VerifyCode: React.FC = () => {
     if (code.length === 6) {
       // Call your backend verify API here
         try {
-            const response = await axios.put(`http://localhost:5000/registration/verify`,{id,code} ,{
+            const response = await axios.put(`${import.meta.env.VITE_API}/registration/verify`,{id,code} ,{
                 withCredentials: true,
               });
               console.log(response.data);

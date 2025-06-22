@@ -11,7 +11,7 @@ function Body() {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/chats`, {
+        const response = await axios.get(`${import.meta.env.VITE_API}/chats`, {
           withCredentials: true,
         });
 

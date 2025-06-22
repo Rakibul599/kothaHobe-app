@@ -18,7 +18,7 @@ const LoginForm: React.FC = () => {
   useEffect( () => {
     const fetchChats = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/chats", {
+        const response = await axios.get(`${import.meta.env.VITE_API}/chats`, {
           withCredentials: true,
         });
         navigate("/chats");
@@ -41,7 +41,7 @@ const LoginForm: React.FC = () => {
   let formHandler=async (event)=>{
     event.preventDefault();
     try {
-      const response= await axios.post("http://localhost:5000/login", formdata, {
+      const response= await axios.post(`${import.meta.env.VITE_API}/login`, formdata, {
         withCredentials: true,
       })
       console.log(response);

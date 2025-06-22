@@ -26,7 +26,7 @@ useEffect(() => {
       name:debouncedQuery,
     }
     try {
-      const response = await axios.post('http://localhost:5000/chats/adduser',name,{
+      const response = await axios.post(`${import.meta.env.VITE_API}/chats/adduser`,name,{
         withCredentials: true,
       });
       setUserdata(response.data)
@@ -43,7 +43,7 @@ useEffect(() => {
   const adduserHandler=async (data)=>{
     console.log(data)
     try {
-      const response = await axios.post('http://localhost:5000/chats/chatconversion',data,{
+      const response = await axios.post(`${import.meta.env.VITE_API}/chats/chatconversion`,data,{
         withCredentials: true,
       });
       if(response.status===200)

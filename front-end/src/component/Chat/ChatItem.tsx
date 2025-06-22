@@ -6,7 +6,7 @@ function ChatItem({ data, userId, setconversation,setConversationchats }) {
   const handlegetChatinfo=async (id)=>{
     console.log(id);
     try {
-      const response = await axios.get(`http://localhost:5000/chats/messages/${id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_API}/chats/messages/${id}`, {
         withCredentials: true,
       });
       setConversationchats(response.data);

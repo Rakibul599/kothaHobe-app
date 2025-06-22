@@ -4,7 +4,7 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import LeftMenu from "../leftMenu/LeftMenu";
 
-const socket = io("http://localhost:5000", {
+const socket = io(`${import.meta.env.VITE_API}`, {
   withCredentials: true,
 });
 
@@ -39,7 +39,7 @@ function Conversation({
 
     try {
       await axios.post(
-        "http://localhost:5000/chats/sendmessage",
+        `${import.meta.env.VITE_API}/chats/sendmessage`,
         { message, conversationInfo },
         { withCredentials: true }
       );
