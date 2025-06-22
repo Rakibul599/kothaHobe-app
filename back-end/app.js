@@ -20,7 +20,7 @@ dotenv.config();
 // const io = require("socket.io")(server);
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:5173", // your frontend
+    origin: process.env.ORIGIN, // your frontend
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -36,7 +36,7 @@ app.use(express.urlencoded({extended:true}))
 app.use(express.static(path.join(__dirname, "public")));
 // app.use(cors());
 app.use(cors({
-  origin: "http://localhost:5173", // Replace with your frontend origin
+  origin: process.env.ORIGIN, // Replace with your frontend origin
   credentials: true,              // Allow cookies to be sent
 }));
 //route handle
