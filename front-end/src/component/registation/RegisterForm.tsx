@@ -42,17 +42,21 @@ const RegisterForm: React.FC = () => {
     formData.append("avaters", file);
     // send the request to server
     // let na={name:"fdhf"}
-    
+
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API}/registration`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      const response = await axios.post(
+        `${import.meta.env.VITE_API}/registration`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-      });
-    
+      );
+
       const result = response.data;
-      const uid=result.id;
-      console.log(response.data)
+      const uid = result.id;
+      console.log(response.data);
       // let response = await fetch("http://localhost:5000//registration", {
       //   method: "POST",
       //   body: formData,
@@ -60,7 +64,7 @@ const RegisterForm: React.FC = () => {
 
       // // get response
       // let result = await response.json();
-      console.log(response.status)
+      console.log(response.status);
       if (response.status === 200 && !result.errors) {
         navigate(`/verify/${uid}`);
       } else {
@@ -127,9 +131,17 @@ const RegisterForm: React.FC = () => {
               type="text"
               id="name"
               placeholder="Your full name"
-              className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 
+                               ${
+                                 errorMsg.email
+                                   ? "border-red-500 focus:ring-red-500"
+                                   : "border-gray-300 focus:ring-blue-500"
+                               }`}
               required
             />
+            <p className={`${errorMsg.name ? "" : "hidden"} text-red-500`}>
+              {errorMsg.name}
+            </p>
           </div>
 
           <div className="mb-4">
