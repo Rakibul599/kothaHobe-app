@@ -60,15 +60,16 @@ const RegisterForm: React.FC = () => {
 
       // // get response
       // let result = await response.json();
-      if (response.status !== 200) {
+      console.log(response.status)
+      if (response.status === 200 && !result.errors) {
+        navigate(`/verify/${uid}`);
+      } else {
         setErrorMsg({
           name: result.errors.name?.msg || "",
           email: result.errors.email?.msg || "",
           password: result.errors.password?.msg || "",
           avatar: result.errors.avatar?.msg || "",
         });
-      } else {
-        navigate(`/verify/${uid}`);
         // alert("Registration successfully");
       }
       // console.log(result.errors.password.msg)

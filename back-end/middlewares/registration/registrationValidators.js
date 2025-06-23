@@ -18,7 +18,9 @@ const newUservalidators = [
     .trim()
     .custom(async (value) => {
       const user = await User.findOne({ email: value });
+
       if (user) {
+       
         throw new Error("Email already in use");
       }
     }),
