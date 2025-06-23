@@ -20,7 +20,12 @@ const newUservalidators = [
       const user = await User.findOne({ email: value });
 
       if (user) {
-       
+       if(user.isVerified===false)
+       {
+        await User.deleteOne({email:value});
+        throw new Error("Please Resubmit Again");
+       }
+       else
         throw new Error("Email already in use");
       }
     }),
