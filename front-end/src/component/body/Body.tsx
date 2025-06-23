@@ -38,7 +38,7 @@ function Body() {
   return (
     <div className="grid md:grid-cols-[70px_400px_auto] grid-cols-[auto]">
       {/* Left sidebar */}
-      <div className={`md:order-1 order-2 ${tab ? "hidden" : "block"} `}>
+      <div className={`md:order-1 order-2 ${tab ? "hidden" : "block"} md:block `}>
         <LeftMenu />
       </div>
 
