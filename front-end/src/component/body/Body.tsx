@@ -7,7 +7,7 @@ import axios from "axios";
 
 function Body() {
   const navigate = useNavigate();
-  const [tab,setTab]=useState<boolean>(false);
+  const [tab, setTab] = useState<boolean>(false);
   useEffect(() => {
     const fetchChats = async () => {
       try {
@@ -37,50 +37,43 @@ function Body() {
   const [userId, setUserid] = useState();
   return (
     <div className="grid md:grid-cols-[70px_400px_auto] grid-cols-[auto]">
-    {/* Left sidebar */}
-    <div className="md:order-1 order-2">
-      <LeftMenu />
+      {/* Left sidebar */}
+      <div className={`md:order-1 order-2 ${tab ? "hidden" : "block"} `}>
+        <LeftMenu />
+      </div>
+
+      {/* Chat List */}
+      <div
+        className={`md:order-2 order-1 ${tab ? "hidden" : "block"} md:block`}
+      >
+        <Chat
+          setconversation={(info) => {
+            setconversation(info);
+            setTab(true); // Activate tab on click
+          }}
+          setConversationchats={setConversationchats}
+          userId={userId}
+          setUserid={setUserid}
+          refresh={refresh}
+          setRefresh={setRefresh}
+        />
+      </div>
+
+      {/* Conversation Panel */}
+      <div className={`order-3 ${tab ? "block" : "hidden"} md:block`}>
+        <Conversation
+          conversationInfo={conversationInfo}
+          setconversation={setconversation}
+          converstionchats={converstionchats}
+          setConversationchats={setConversationchats}
+          userId={userId}
+          setUserid={setUserid}
+          refresh={refresh}
+          setRefresh={setRefresh}
+          setTab={setTab}
+        />
+      </div>
     </div>
-  
-    {/* Chat List */}
-    <div
-      className={`md:order-2 order-1 ${
-        tab ? "hidden" : "block"
-      } md:block`}
-    >
-      <Chat
-        setconversation={(info) => {
-          setconversation(info);
-          setTab(true); // Activate tab on click
-        }}
-        setConversationchats={setConversationchats}
-        userId={userId}
-        setUserid={setUserid}
-        refresh={refresh}
-        setRefresh={setRefresh}
-      />
-    </div>
-  
-    {/* Conversation Panel */}
-    <div
-      className={`order-3 ${
-        tab ? "block" : "hidden"
-      } md:block`}
-    >
-      <Conversation
-        conversationInfo={conversationInfo}
-        setconversation={setconversation}
-        converstionchats={converstionchats}
-        setConversationchats={setConversationchats}
-        userId={userId}
-        setUserid={setUserid}
-        refresh={refresh}
-        setRefresh={setRefresh}
-        setTab={setTab}
-      />
-    </div>
-  </div>
-  
   );
 }
 
