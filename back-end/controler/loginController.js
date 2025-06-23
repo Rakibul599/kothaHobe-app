@@ -28,6 +28,8 @@ async function loggedIn(req,res,next) {
                     maxAge: process.env.JWT_EXPIRY,
                     httpOnly: true,
                     signed: true,
+                    secure: true, 
+                    sameSite: "None", 
                   });
 
 
