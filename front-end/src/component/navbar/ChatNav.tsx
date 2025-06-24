@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { getUrlimg } from '../../utils/GetUrlImg'
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-function ChatNav() {
+function ChatNav({refresh,setRefresh}) {
   const [isadduser,setAdduser]=useState<boolean>(false);
   const [addusername,setUsername]=useState<string>("");
   const [debouncedQuery, setDebouncedQuery] = useState(addusername);
@@ -50,7 +50,7 @@ useEffect(() => {
       {
         
         setAdduser(false);
-        
+        setRefresh(!refresh);
         alert("Added success")
        
       }

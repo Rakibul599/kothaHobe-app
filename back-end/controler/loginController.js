@@ -54,8 +54,17 @@ async function loggedIn(req,res,next) {
 function loginAuth(req, res, next) {
     res.status(200).json({ msg: "You are authenticated", user: req.user });
 }
+function logout(req,res,next){
+    res.clearCookie(process.env.COOKIE_NAME,{
+        httpOnly: true,
+        secure: true, 
+        sameSite: "None", 
+      });
+      return res.status(200).json({ message: 'Logged out successfully' });
+}
 
 module.exports={
     loggedIn,
-    loginAuth
+    loginAuth,
+    logout
 }

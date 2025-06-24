@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { getUrlimg } from "../../utils/GetUrlImg";
 
-function LeftMenu() {
+function LeftMenu({more,setMore}) {
   const [selectMenu, SetSelectMenu] = useState("");
   return (
     <div className="bg-[#FFFFFF] flex md:flex-col md:gap-5 gap-1 items-center mt-3.5">
@@ -9,7 +9,7 @@ function LeftMenu() {
         className={`flex flex-col items-center p-2 w-full ${
           selectMenu == "chat" ? "bg-[#18b2f8] rounded-md" : ""
         } `}
-        onClick={() => SetSelectMenu("chat")}
+        onClick={() =>{ SetSelectMenu("chat");setMore(false)}}
       >
         <img
           src={getUrlimg("messenger.png")}
@@ -23,7 +23,7 @@ function LeftMenu() {
         className={`flex flex-col items-center p-2 w-full ${
           selectMenu == "group" ? "bg-[#18b2f8] rounded-md" : ""
         } `}
-        onClick={() => SetSelectMenu("group")}
+        onClick={() =>{SetSelectMenu("group");setMore(false)}}
       >
         <img
           src={getUrlimg("people.png")}
@@ -36,12 +36,12 @@ function LeftMenu() {
         className={`flex flex-col items-center p-2 w-full ${
           selectMenu == "profile" ? "bg-[#18b2f8] rounded-md" : ""
         } `}
-        onClick={() => SetSelectMenu("profile")}
+        onClick={() =>{ SetSelectMenu("profile");setMore(false)}}
       >
         <img src={getUrlimg("user.png")} className="md:h-[25px] md:w-[25px] h-[18px] w-[18px]" alt="" />
         <p>Profile</p>
       </div>
-      <div className="flex flex-col items-center p-2 w-full">
+      <div className="flex flex-col items-center p-2 w-full" onClick={()=>setMore(!more)}>
         <img src={getUrlimg("menu.png")} className="md:h-[25px] md:w-[25px] h-[18px] w-[18px]" alt="" />
         <p>More</p>
       </div>

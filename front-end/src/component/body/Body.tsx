@@ -8,6 +8,7 @@ import axios from "axios";
 function Body() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<boolean>(false);
+  const [more, setMore] = useState(false);
   useEffect(() => {
     const fetchChats = async () => {
       try {
@@ -38,8 +39,10 @@ function Body() {
   return (
     <div className="grid md:grid-cols-[70px_400px_auto] grid-cols-[auto]">
       {/* Left sidebar */}
-      <div className={`md:order-1 order-2 ${tab ? "hidden" : "block"} md:block `}>
-        <LeftMenu />
+      <div
+        className={`md:order-1 order-2 ${tab ? "hidden" : "block"} md:block `}
+      >
+        <LeftMenu more={more} setMore={setMore} />
       </div>
 
       {/* Chat List */}
@@ -56,6 +59,8 @@ function Body() {
           setUserid={setUserid}
           refresh={refresh}
           setRefresh={setRefresh}
+          more={more}
+          setMore={setMore}
         />
       </div>
 
