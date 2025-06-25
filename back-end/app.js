@@ -34,11 +34,17 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(express.json());
 app.use(express.urlencoded({extended:true}))
 app.use(express.static(path.join(__dirname, "public")));
+// app.use('/uploads/avatars', express.static(path.join(__dirname, 'public/uploads/avatars')));
+
 // app.use(cors());
 app.use(cors({
   origin: process.env.ORIGIN, // Replace with your frontend origin
   credentials: true,              // Allow cookies to be sent
 }));
+// app.use('public/', express.static(path.join(__dirname, 'public/uploads/avatars/')));
+// console.log(__dirname)
+app.use('/images',express.static("public"));
+
 //route handle
 app.use('/registration', resisterRouter);
 app.use('/login',loginRouter)

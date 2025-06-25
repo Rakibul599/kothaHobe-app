@@ -28,6 +28,10 @@ const messageSchema = mongoose.Schema(
       type: mongoose.Types.ObjectId,
       required: true,
     },
+    is_seen:{
+      type:Boolean,
+      default:false
+    }
   },
   {
     timestamps: true,

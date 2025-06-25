@@ -33,7 +33,7 @@ function Chat({setconversation,setConversationchats,userId,setUserid,refresh,set
     fetchChatConversion();
   }, [refresh]);
   const items = conversationData ? conversationData.map((inf: any, index: number) => (
-    <ChatItem data={inf} userId={userId} key={index} setconversation={setconversation} setConversationchats={setConversationchats} />
+    <ChatItem data={inf} userId={userId} key={index} setconversation={setconversation} setConversationchats={setConversationchats} refresh={refresh} setRefresh={setRefresh} />
   )) : null;
   async function handlelogout() {
     console.log("logout")

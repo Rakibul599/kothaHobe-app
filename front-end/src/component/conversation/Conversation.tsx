@@ -31,7 +31,8 @@ function Conversation({
       behavior: smooth ? "smooth" : "auto", //Scroll behavior: smooth or instant
     });
   };
-
+  console.log('hello')
+  console.log(conversationInfo)
   const handleSend = async (e) => {
     e.preventDefault();
     setRefresh(!refresh);
@@ -68,7 +69,12 @@ function Conversation({
             file: null,
           },
         ]);
+        // setRefresh(!refresh)
       }
+      console.log(refresh);
+      // setRefresh(!refresh)
+      setRefresh((prev) => !prev); 
+      console.log(refresh);
     });
 
     return () => {
@@ -105,7 +111,7 @@ function Conversation({
           alt=""
         />
         <img
-          src={getUrlimg("man.png")}
+          src={conversationInfo.avatar===null?getUrlimg('man.png'):`${import.meta.env.VITE_API}/images/uploads/avatars/${conversationInfo.avatar}`}
           className="h-15 w-15 rounded-[100%]"
           alt=""
         />
