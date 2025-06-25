@@ -9,15 +9,31 @@ async function newRegisteruser(req, res, next) {
 
   const code = crypto.randomInt(100000, 999999).toString();
   const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
+  console.log(req.file);
+  console.log(process.env.NODE_ENV)
   if (req.file) {
-    newUser = User({
-      ...req.body,
-      password: hashedPassword,
-      avater: req.file.filename,
-      verificationCode: code,
-      verificationCodeExpires: expires,
-    });
+    if(process.env.NODE_ENV=='production')
+    {
+      newUser = User({
+        ...req.body,
+        password: hashedPassword,
+        // avater: req.file.filename,
+        avater: req.file.path,
+        verificationCode: code,
+        verificationCodeExpires: expires,
+      });
+    }
+    else{
+      newUser = User({
+        ...req.body,
+        password: hashedPassword,
+        // avater: req.file.filename,
+        avater: req.file.path,
+        verificationCode: code,
+        verificationCodeExpires: expires,
+      });
+    }
+
   } else {
     newUser = User({
       ...req.body,

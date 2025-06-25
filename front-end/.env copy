@@ -1,1 +1,4 @@
 VITE_API=http://localhost:5000
+# VITE_API=https://kothahobe-app.onrender.com
+# VITE_ENV=development
+VITE_ENV=production

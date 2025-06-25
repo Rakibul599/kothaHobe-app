@@ -5,6 +5,7 @@ import { data, Link, useNavigate } from "react-router-dom";
 const RegisterForm: React.FC = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<{
     name: string;
@@ -42,7 +43,7 @@ const RegisterForm: React.FC = () => {
     formData.append("avaters", file);
     // send the request to server
     // let na={name:"fdhf"}
-
+    setLoading(true)
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_API}/registration`,
@@ -66,6 +67,7 @@ const RegisterForm: React.FC = () => {
       // let result = await response.json();
       console.log(response.status);
       if (response.status === 200 && !result.errors) {
+        setLoading(false)
         navigate(`/verify/${uid}`);
       } else {
         setErrorMsg({
@@ -74,6 +76,7 @@ const RegisterForm: React.FC = () => {
           password: result.errors.password?.msg || "",
           avatar: result.errors.avatar?.msg || "",
         });
+        setLoading(false)
         // alert("Registration successfully");
       }
       // console.log(result.errors.password.msg)
@@ -199,7 +202,7 @@ const RegisterForm: React.FC = () => {
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
           >
-            Register
+            {loading ? "Processing..." : "Register"}
           </button>
 
           <div className="mt-4 text-center">

@@ -42,17 +42,17 @@ function ChatItem({ data, userId, setconversation,setConversationchats,refresh,s
       <div className="grid grid-cols-[70px_auto] items-center p-2">
         <div className="w-20">
           {/* <div className='h-15 w-15 bg-green-700 rounded-[100%]'></div> */}
-          {console.log(data.creator.avatar )}
+          {console.log(import.meta.env.VITE_ENV )}
 
           <img
   src={
     userId === data.participant.id
       ? data.creator.avatar === null
         ? getUrlimg("man.png")
-        :`${import.meta.env.VITE_API}/images/uploads/avatars/${data.creator.avatar}`
+        : import.meta.env.VITE_ENV==="production" ? data.creator.avatar: `${import.meta.env.VITE_API}/images/uploads/avatars/${data.creator.avatar}`
       : data.participant.avatar === null
         ? getUrlimg("man.png")
-        : `${import.meta.env.VITE_API}/images/uploads/avatars/${data.participant.avatar}`
+        : import.meta.env.VITE_ENV==="production" ? data.participant.avatar: `${import.meta.env.VITE_API}/images/uploads/avatars/${data.participant.avatar}`
   }
   className="h-15 w-15 rounded-[100%]"
   alt=""

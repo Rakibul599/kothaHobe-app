@@ -6,5 +6,12 @@ JWT_SECRET=hhhdjjsndjf
 COOKIE_SECRET=Kothaobe
 JWT_EXPIRY=86400000
 COOKIE_NAME=KothaHobe
-APP_PASSWORD=iwho obbf cknp dppe
+APP_PASSWORD=iwho obbf ckop dpfd
 EMAIL=kothahobeapp@gmail.com
+# NODE_ENV=development
+NODE_ENV=production
+# cloudnary api
+CLOUD_NAME=df7ogazjd2e
+CLOUD_API_KEY=753348824846er978
+CLOUD_API_SECRET=b6QByWtmzX7SFcttlxz8Rb1KwknKg
+
