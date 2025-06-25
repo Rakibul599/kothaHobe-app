@@ -14,5 +14,6 @@ const storage=multer.diskStorage({
 const upload = multer({ storage: storage })
 function uploads(req,res,next){
     upload.single('avaters')(req,res,next)
+    console.log("avater upload")
 }
 module.exports=uploads

@@ -134,7 +134,7 @@ async function conversationItem(req, res, next) {
         },
       },
     ]);
-    console.log(unreadCounts)
+    // console.log(unreadCounts)
     //Merge latest message info with conversations
     const merged = conversations.map((conv) => {
       const last = latestMessages.find(
