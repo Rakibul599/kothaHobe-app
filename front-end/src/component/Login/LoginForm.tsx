@@ -12,6 +12,7 @@ const LoginForm: React.FC = () => {
     password: "",
     remember: false,
   });
+  const [errr,setEroor]=useState<String>("")
 
   const navigate = useNavigate();
 
@@ -51,6 +52,10 @@ const LoginForm: React.FC = () => {
         navigate('/chats')
       }
     } catch (error) {
+      if(axios.isAxiosError(error))
+      {
+        setEroor(error.response?.data.msg)
+      }
       console.log(error)
     }
   }
@@ -115,6 +120,9 @@ const LoginForm: React.FC = () => {
           >
             Login
           </button>
+          <p className={`${errr ? "" : "hidden"} text-red-500`}>
+              {errr}
+            </p>
           <div className="mt-4">
             <p>
               Not Registered?{" "}

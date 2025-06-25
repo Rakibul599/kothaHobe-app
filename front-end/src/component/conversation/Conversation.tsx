@@ -31,8 +31,8 @@ function Conversation({
       behavior: smooth ? "smooth" : "auto", //Scroll behavior: smooth or instant
     });
   };
-  console.log('hello')
-  console.log(conversationInfo)
+  // console.log('hello')
+  // console.log(conversationInfo)
   const handleSend = async (e) => {
     e.preventDefault();
     setRefresh(!refresh);
@@ -111,15 +111,16 @@ function Conversation({
           alt=""
         />
         <img
-          src={conversationInfo.avatar===null?getUrlimg('man.png'):`${import.meta.env.VITE_API}/images/uploads/avatars/${conversationInfo.avatar}`}
-          className="h-15 w-15 rounded-[100%]"
+          src={conversationInfo.avatar===null || conversationInfo.id===0 ?getUrlimg('man.png'):`${import.meta.env.VITE_API}/images/uploads/avatars/${conversationInfo.avatar}`}
+          className={`h-15 w-15 rounded-[100%] `}
           alt=""
         />
-        <h1 className="font-bold">{conversationInfo.name}</h1>
+        <h1 className="font-bold">{ conversationInfo.name}</h1>
       </div>
 
       <div>
         <div className="bg-[#f0f0f3] md:h-[75vh] h-[84vh] m-[0px_10px_0px_10px] p-3 overflow-y-scroll rounded-md">
+          <div className={`text-lg font-bold text-center ${conversationInfo.id===0 ? "":"hidden"}`}>please select any conversation</div>
           {converstionchats.map((msg, index) => (
             <div
               key={index}
