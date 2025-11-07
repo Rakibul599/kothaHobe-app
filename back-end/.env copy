@@ -1,6 +1,6 @@
 PORT=5000
 # MONGOOSE_CONNECTION_STRING="mongodb://localhost:27017/Kothaobe"
-MONGOOSE_CONNECTION_STRING=mongodb+srv://root:R%40kib8956@cluster0.nygynsc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGOOSE_CONNECTION_STRING=mongodb+srv://root:R%40kibcluster0.nygynsc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 ORIGIN=http://localhost:5173
 JWT_SECRET=hhhdjjsndjf
 COOKIE_SECRET=Kothaobe
