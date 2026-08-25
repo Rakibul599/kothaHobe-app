@@ -35,27 +35,34 @@ function Conversation({
   // console.log(conversationInfo)
   const handleSend = async (e) => {
     e.preventDefault();
-    setRefresh(!refresh);
     if (message.trim() === "" && !file) return;
 
     try {
+      const formData = new FormData();
+      if (message.trim() !== "") {
+        formData.append("message", message);
+      }
+      formData.append("conversationInfo", JSON.stringify(conversationInfo));
+      if (file) {
+        formData.append("attachment", file);
+      }
+
       await axios.post(
         `${import.meta.env.VITE_API}/chats/sendmessage`,
-        { message, conversationInfo },
-        { withCredentials: true }
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
       );
     } catch (error) {
       console.log(error);
     }
 
-    setConversationchats([
-      ...converstionchats,
-      { text: message, file: file, sender: { id: userId } },
-    ]);
-
     setMessage("");
     setFile(null);
     setSender(!isSender);
+    setRefresh((prev) => !prev);
   };
 
   useEffect(() => {
@@ -66,15 +73,12 @@ function Conversation({
           {
             text: data.message.message,
             sender: { id: data.message.sender.id },
+            attachment: data.message.attachment,
             file: null,
           },
         ]);
-        // setRefresh(!refresh)
       }
-      console.log(refresh);
-      // setRefresh(!refresh)
       setRefresh((prev) => !prev);
-      console.log(refresh);
     });
 
     return () => {
@@ -143,13 +147,30 @@ function Conversation({
               }`}
             >
               {msg.text && <div>{msg.text}</div>}
+              {msg.attachment && msg.attachment.length > 0 && (
+                <div className="mt-2">
+                  {msg.attachment.map((att, idx) => {
+                    const imgUrl = att.startsWith("http")
+                      ? att
+                      : `${import.meta.env.VITE_API}/uploads/avatars/${att}`;
+                    return (
+                      <img
+                        key={idx}
+                        src={imgUrl}
+                        alt="attachment"
+                        className="max-w-full h-auto rounded-md max-h-[250px] object-cover"
+                      />
+                    );
+                  })}
+                </div>
+              )}
               {msg.file && (
                 <div className="mt-2">
-                  {msg.file.type.startsWith("image/") ? (
+                  {msg.file.type && msg.file.type.startsWith("image/") ? (
                     <img
                       src={URL.createObjectURL(msg.file)}
                       alt="attachment"
-                      className="max-w-full h-auto rounded-md"
+                      className="max-w-full h-auto rounded-md max-h-[250px] object-cover"
                     />
                   ) : (
                     <a
