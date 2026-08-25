@@ -64,4 +64,16 @@ app.use((req, res, next) => {
   });
 server.listen(process.env.PORT,()=>{
     console.log(`app listening port ${process.env.PORT}`)
+
+    // Keep Render Server Awake 24/7 (Self Ping every 14 mins in production)
+    if (process.env.NODE_ENV === "production") {
+      const https = require("https");
+      setInterval(() => {
+        https.get("https://kothahobe-app.onrender.com", (res) => {
+          console.log("Self-ping success: Render server kept awake!");
+        }).on("error", (err) => {
+          console.log("Self-ping error:", err.message);
+        });
+      }, 14 * 60 * 1000);
+    }
 })

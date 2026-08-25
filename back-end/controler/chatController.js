@@ -198,12 +198,30 @@ async function isSeen(req,res,next) {
 
 //Send new message
 async function sendMessage(req, res, next) {
-  // console.log(req.user.userId);
-  if (req.body.message) {
-    try {
-      let attachments = null;
+  try {
+    let conversationInfo = req.body.conversationInfo;
+    if (typeof conversationInfo === "string") {
+      try {
+        conversationInfo = JSON.parse(conversationInfo);
+      } catch (e) {}
+    }
+
+    let attachments = [];
+    if (req.file) {
+      if (process.env.NODE_ENV === "development") {
+        attachments.push(req.file.filename);
+      } else {
+        attachments.push(req.file.path);
+      }
+    } else if (req.body.attachment) {
+      attachments.push(req.body.attachment);
+    }
+
+    const messageText = req.body.message || "";
+
+    if (messageText.trim() !== "" || attachments.length > 0) {
       const messages = new Message({
-        text: req.body.message,
+        text: messageText,
         attachment: attachments,
         sender: {
           id: req.user.userid,
@@ -211,38 +229,36 @@ async function sendMessage(req, res, next) {
           avatar: req.user.avatar ?? null,
         },
         receiver: {
-          id: req.body.conversationInfo.id,
-          name: req.body.conversationInfo.name,
-          avatar: req.body.conversationInfo.avatar ?? null,
+          id: conversationInfo.id,
+          name: conversationInfo.name,
+          avatar: conversationInfo.avatar ?? null,
         },
-        conversation_id: req.body.conversationInfo.con_id,
+        conversation_id: conversationInfo.con_id,
       });
       const result = await messages.save();
-      console.log("hello1");
-      // handle live message
-      let _id=req.body.conversationInfo.con_id;
-      
-      const message={
+
+      let _id = conversationInfo.con_id;
+
+      const message = {
         conversation_id: _id,
         sender: {
           id: req.user.userid,
           name: req.user.username,
           avatar: req.user.avatar || null,
         },
-        message: req.body.message,
+        message: messageText,
         attachment: attachments,
         date_time: result.date_time,
-      }
-      console.log(message.conversation_id)
-      global.io.emit("new_message", {message,});
-      console.log("hello");
+      };
+
+      global.io.emit("new_message", { message });
       return res.status(200).json({ msg: "success", data: result });
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({ err: error });
+    } else {
+      return res.status(400).json({ msg: "message text or attachment is required!" });
     }
-  } else {
-    res.status(500).json({ msg: "message text or attachment is required!" });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ err: error });
   }
 }
 async function getMessage(req, res, next) {
