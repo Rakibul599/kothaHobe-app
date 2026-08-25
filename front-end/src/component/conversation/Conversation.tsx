@@ -86,6 +86,7 @@ function Conversation({
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
 
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
 
@@ -97,8 +98,9 @@ function Conversation({
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() === "" && !file) return;
+    if ((message.trim() === "" && !file) || isSending) return;
 
+    setIsSending(true);
     try {
       const formData = new FormData();
       if (message.trim() !== "") {
@@ -124,6 +126,8 @@ function Conversation({
       );
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsSending(false);
     }
 
     setMessage("");
@@ -480,12 +484,16 @@ function Conversation({
             }}
           />
 
-          <button type="submit" className="p-1">
-            <img
-              src={getUrlimg("send.png")}
-              className="h-[28px] w-[28px]"
-              alt="send"
-            />
+          <button type="submit" disabled={isSending} className="p-1 disabled:opacity-50">
+            {isSending ? (
+              <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <img
+                src={getUrlimg("send.png")}
+                className="h-[28px] w-[28px]"
+                alt="send"
+              />
+            )}
           </button>
         </form>
       </div>
