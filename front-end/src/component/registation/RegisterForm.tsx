@@ -201,9 +201,17 @@ const RegisterForm: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2.5 rounded-xl hover:bg-blue-700 transition duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 font-semibold flex items-center justify-center gap-2"
           >
-            {loading ? "Processing..." : "Register"}
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Creating Account...</span>
+              </>
+            ) : (
+              "Register"
+            )}
           </button>
 
           <div className="mt-4 text-center">

@@ -4,19 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 
 const LoginForm: React.FC = () => {
   const [formdata, setFormdata] = useState<{
-    email: string,
-    password: string,
-    remember: boolean,
+    email: string;
+    password: string;
+    remember: boolean;
   }>({
     email: "",
     password: "",
     remember: false,
   });
-  const [errr,setEroor]=useState<String>("")
+  const [errr, setEroor] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
-  useEffect( () => {
+  useEffect(() => {
     const fetchChats = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_API}/chats`, {
@@ -32,6 +33,7 @@ const LoginForm: React.FC = () => {
 
     fetchChats();
   }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormdata((prev) => ({
@@ -39,36 +41,46 @@ const LoginForm: React.FC = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-  let formHandler=async (event)=>{
+
+  const formHandler = async (event: React.FormEvent) => {
     event.preventDefault();
+    setEroor("");
+    setLoading(true);
+
     try {
-      const response= await axios.post(`${import.meta.env.VITE_API}/login`, formdata, {
-        withCredentials: true,
-      })
-      console.log(response);
-      if(response.data.success)
-      {
-        console.log(document.cookie)
-        navigate('/chats')
+      const response = await axios.post(
+        `${import.meta.env.VITE_API}/login`,
+        formdata,
+        {
+          withCredentials: true,
+        }
+      );
+      if (response.data.success) {
+        navigate("/chats");
       }
     } catch (error) {
-      if(axios.isAxiosError(error))
-      {
-        setEroor(error.response?.data.msg)
+      if (axios.isAxiosError(error)) {
+        setEroor(error.response?.data.msg || "Login failed");
+      } else {
+        setEroor("Login failed");
       }
-      console.log(error)
+      console.log(error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-200 to-teal-300 flex place-content-center items-center gap-6">
+    <div className="min-h-screen bg-gradient-to-r from-blue-200 to-teal-300 flex place-content-center items-center gap-6 p-4">
       <div className="md:block hidden">
-        
         <p className="text-black text-6xl font-bold">KothaHobe!</p>
-        <p className="text-4xl w-[60%] mt-1">KothHobe connects to Each other!</p>
-      
+        <p className="text-4xl w-[60%] mt-1">KothaHobe connects to Each other!</p>
       </div>
+
       <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-      <h1 className="text-black text-4xl font-bold text-center md:hidden">KothaHobe!</h1>
+        <h1 className="text-black text-4xl font-bold text-center md:hidden">
+          KothaHobe!
+        </h1>
         <h2 className="text-3xl font-bold text-blue-600 text-center">Login</h2>
         <p className="text-center text-gray-600 mt-1 mb-6">
           Welcome back! Please login to your account
@@ -108,25 +120,46 @@ const LoginForm: React.FC = () => {
           </div>
 
           <div className="flex items-center mb-6">
-            <input type="checkbox" id="remember" onChange={handleChange} className="mr-2" name="remember" />
-            <label htmlFor="remember" className="text-sm text-gray-700">
+            <input
+              type="checkbox"
+              id="remember"
+              onChange={handleChange}
+              className="mr-2 cursor-pointer"
+              name="remember"
+            />
+            <label
+              htmlFor="remember"
+              className="text-sm text-gray-700 cursor-pointer"
+            >
               Remember me
             </label>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700 transition duration-200"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2.5 rounded-xl hover:bg-blue-700 transition duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 font-semibold flex items-center justify-center gap-2"
           >
-            Login
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Logging in...</span>
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
-          <p className={`${errr ? "" : "hidden"} text-red-500`}>
+
+          {errr && (
+            <p className="text-red-500 text-sm mt-3 text-center font-medium">
               {errr}
             </p>
-          <div className="mt-4">
-            <p>
+          )}
+
+          <div className="mt-4 text-center">
+            <p className="text-sm">
               Not Registered?{" "}
-              <Link to={"/registration"} className="text-blue-500">
+              <Link to={"/registration"} className="text-blue-600 font-semibold hover:underline">
                 Register
               </Link>
             </p>
