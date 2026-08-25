@@ -7,6 +7,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
+import * as Updates from 'expo-updates';
 
 export default function SplashScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -26,11 +27,26 @@ export default function SplashScreen({ navigation }: any) {
       }),
     ]).start();
 
-    const timer = setTimeout(() => {
-      navigation.replace('Login');
-    }, 2000);
+    const checkUpdatesAndNavigate = async () => {
+      try {
+        if (!__DEV__) {
+          const update = await Updates.checkForUpdateAsync();
+          if (update.isAvailable) {
+            await Updates.fetchUpdateAsync();
+            await Updates.reloadAsync(); // Automatically reloads app with new OTA update!
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('OTA Update check error:', error);
+      }
 
-    return () => clearTimeout(timer);
+      setTimeout(() => {
+        navigation.replace('Login');
+      }, 1800);
+    };
+
+    checkUpdatesAndNavigate();
   }, []);
 
   return (
