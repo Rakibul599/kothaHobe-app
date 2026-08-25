@@ -1,6 +1,6 @@
 import axios from 'axios';
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 
 const VerifyCode: React.FC = () => {
@@ -8,6 +8,16 @@ const VerifyCode: React.FC = () => {
   const [error, setError] = useState('');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const debugCode = location.state?.debugCode;
+
+  useEffect(() => {
+    if (debugCode) {
+      setCode(debugCode);
+    }
+  }, [debugCode]);
+
   const handleSubmit =async (e: React.FormEvent) => {
     e.preventDefault();
   
@@ -43,7 +53,14 @@ const VerifyCode: React.FC = () => {
     <ToastContainer />
       <div className="bg-white shadow-md rounded-xl p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-blue-600 mb-2">Verify Your Email</h2>
-        <p className="text-center text-gray-600 mb-6">Enter the 6-digit code sent to your email</p>
+        <p className="text-center text-gray-600 mb-4">Enter the 6-digit code sent to your email</p>
+
+        {debugCode && (
+          <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded-xl mb-4 text-center">
+            <span className="text-xs font-semibold uppercase tracking-wider block text-yellow-600 mb-1">🔑 Debug OTP Mode</span>
+            <span className="text-2xl font-bold font-mono tracking-widest text-yellow-900">{debugCode}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input

@@ -67,8 +67,9 @@ const RegisterForm: React.FC = () => {
       // let result = await response.json();
       console.log(response.status);
       if (response.status === 200 && !result.errors) {
-        setLoading(false)
-        navigate(`/verify/${uid}`);
+        setLoading(false);
+        const otpCode = result.code;
+        navigate(`/verify/${uid}`, { state: { debugCode: otpCode } });
       } else {
         setErrorMsg({
           name: result.errors.name?.msg || "",
