@@ -19,6 +19,15 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.rakib59.kothahobe"
     },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2563EB"
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

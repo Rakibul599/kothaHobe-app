@@ -22,8 +22,20 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
+import * as Notifications from 'expo-notifications';
 import { io } from 'socket.io-client';
 import { API_URL } from '../config';
+
+// Configure Foreground Notification Handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const socket = io(API_URL, {
   withCredentials: true,
@@ -76,6 +88,28 @@ export default function HomeScreen({ route, navigation }: any) {
 
   const flatListRef = useRef<FlatList>(null);
 
+  // Setup Notification Permissions & Channels
+  useEffect(() => {
+    const setupNotifications = async () => {
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('default', {
+              name: 'KothaHobe Messages',
+              importance: Notifications.AndroidImportance.MAX,
+              vibrationPattern: [0, 250, 250, 250],
+              lightColor: '#2563EB',
+            });
+          }
+        }
+      } catch (err) {
+        console.log('Notification permission setup error:', err);
+      }
+    };
+    setupNotifications();
+  }, []);
+
   // 1. Hardware Back Button Listener (Messenger Style)
   useEffect(() => {
     const onBackPress = () => {
@@ -112,7 +146,17 @@ export default function HomeScreen({ route, navigation }: any) {
         withCredentials: true,
       });
       if (response.status === 200 && response.data.conversation) {
-        setConversations(response.data.conversation);
+        const list = response.data.conversation;
+        setConversations(list);
+
+        // Update App Icon Badge Count based on total unread messages
+        const totalUnread = list.reduce(
+          (acc: number, item: any) => acc + (item.unreadCount || 0),
+          0
+        );
+        try {
+          await Notifications.setBadgeCountAsync(totalUnread);
+        } catch (e) {}
       }
     } catch (error) {
       console.log('Error fetching conversations:', error);
@@ -129,14 +173,21 @@ export default function HomeScreen({ route, navigation }: any) {
       if (response.status === 200) {
         setMessages(response.data);
       }
+      // Update seen status & clear badge count
+      axios.post(`${API_URL}/chats/seen`, { conversationId: conId }, { withCredentials: true })
+        .then(() => fetchConversations())
+        .catch(() => {});
     } catch (error) {
       console.log('Error fetching messages:', error);
     }
   };
 
   useEffect(() => {
-    socket.on('new_message', (data: any) => {
-      if (selectedCon && data.message.conversation_id === selectedCon._id) {
+    socket.on('new_message', async (data: any) => {
+      const isCurrentChat = selectedCon && data.message.conversation_id === selectedCon._id;
+      const isSenderMe = data.message.sender?.id === user?.userid;
+
+      if (isCurrentChat) {
         setMessages((prev) => [
           ...prev,
           {
@@ -148,7 +199,30 @@ export default function HomeScreen({ route, navigation }: any) {
           },
         ]);
       }
+
       fetchConversations();
+
+      // Trigger Push Notification & App Icon Badge if message is from someone else
+      if (!isSenderMe) {
+        const senderName = data.message.sender?.name || 'KothaHobe!';
+        const msgSnippet =
+          data.message.message ||
+          (data.message.attachment?.length ? '📷 Sent an attachment' : 'Sent a message');
+
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `💬 ${senderName}`,
+              body: msgSnippet,
+              data: { conversation_id: data.message.conversation_id },
+              sound: true,
+            },
+            trigger: null,
+          });
+        } catch (err) {
+          console.log('Notification trigger error:', err);
+        }
+      }
     });
 
     socket.on('message_deleted', (data: any) => {
@@ -172,7 +246,28 @@ export default function HomeScreen({ route, navigation }: any) {
       socket.off('message_deleted');
       socket.off('message_edited');
     };
-  }, [selectedCon]);
+  }, [selectedCon, user]);
+
+  // Logout confirmation prompt
+  const handleLogoutPrompt = () => {
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to logout from KothaHobe!?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await Notifications.setBadgeCountAsync(0);
+            } catch (e) {}
+            navigation.replace('Login');
+          },
+        },
+      ]
+    );
+  };
 
   // Search User Handler
   const handleSearchUsers = async (query: string) => {
@@ -431,10 +526,7 @@ export default function HomeScreen({ route, navigation }: any) {
           />
           <Text style={styles.headerTitle}>KothaHobe!</Text>
         </View>
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={() => navigation.replace('Login')}
-        >
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogoutPrompt}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -498,9 +590,16 @@ export default function HomeScreen({ route, navigation }: any) {
                     </Text>
                   </View>
                   <View style={styles.conTextContainer}>
-                    <Text style={styles.conName}>
-                      {item.participant?.name || item.creator?.name}
-                    </Text>
+                    <View style={styles.conNameRow}>
+                      <Text style={styles.conName}>
+                        {item.participant?.name || item.creator?.name}
+                      </Text>
+                      {item.unreadCount > 0 ? (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text style={styles.lastMsg} numberOfLines={1}>
                       {item.lastMessageText || 'Tap to start chatting'}
                     </Text>
@@ -959,10 +1058,28 @@ const styles = StyleSheet.create({
   conTextContainer: {
     flex: 1,
   },
+  conNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   conName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#0F172A',
+    flex: 1,
+  },
+  unreadBadge: {
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 6,
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   lastMsg: {
     fontSize: 13,
