@@ -262,28 +262,97 @@ async function sendMessage(req, res, next) {
   }
 }
 async function getMessage(req, res, next) {
-  console.log(req.params.conversation_id);
   if (req.params.conversation_id) {
     try {
-      const message = await Message.find({
+      const messages = await Message.find({
         conversation_id: req.params.conversation_id,
-      });
-      console.log(message);
-      res.status(200).json(message);
+      })
+        .sort({ createdAt: 1 })
+        .lean();
+
+      return res.status(200).json(messages);
     } catch (error) {
-      console.log(error);
+      console.log("Error getting messages:", error);
+      return res.status(500).json({ msg: "Error fetching messages" });
     }
   } else {
-    console.log("conversion id is required");
-    res.status(500).json({ msg: "conversion id is required" });
+    return res.status(400).json({ msg: "Conversation ID is required" });
   }
-  res.status(200).json();
 }
+async function deleteMessage(req, res, next) {
+  try {
+    const messageId = req.params.message_id;
+    const userId = req.user.userid;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ msg: "Message not found" });
+    }
+
+    if (String(message.sender.id) !== String(userId)) {
+      return res.status(403).json({ msg: "Unauthorized to delete this message" });
+    }
+
+    message.is_deleted = true;
+    message.text = "";
+    message.attachment = [];
+    const updated = await message.save();
+
+    global.io.emit("message_deleted", {
+      message_id: messageId,
+      conversation_id: message.conversation_id,
+      is_deleted: true,
+    });
+
+    return res.status(200).json({ msg: "Message unsent successfully", data: updated });
+  } catch (error) {
+    console.error("Delete message error:", error);
+    return res.status(500).json({ msg: "Failed to delete message" });
+  }
+}
+
+async function editMessage(req, res, next) {
+  try {
+    const messageId = req.params.message_id;
+    const { text } = req.body;
+    const userId = req.user.userid;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ msg: "Message text is required" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ msg: "Message not found" });
+    }
+
+    if (String(message.sender.id) !== String(userId)) {
+      return res.status(403).json({ msg: "Unauthorized to edit this message" });
+    }
+
+    message.text = text.trim();
+    const updated = await message.save();
+
+    global.io.emit("message_edited", {
+      message_id: messageId,
+      conversation_id: message.conversation_id,
+      text: updated.text,
+    });
+
+    return res.status(200).json({ msg: "Message edited successfully", data: updated });
+  } catch (error) {
+    console.error("Edit message error:", error);
+    return res.status(500).json({ msg: "Failed to edit message" });
+  }
+}
+
 module.exports = {
   addUser,
   addConversion,
   conversationItem,
   sendMessage,
   getMessage,
-  isSeen
+  isSeen,
+  deleteMessage,
+  editMessage,
 };

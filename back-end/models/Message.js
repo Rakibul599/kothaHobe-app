@@ -31,12 +31,18 @@ const messageSchema = mongoose.Schema(
     is_seen:{
       type:Boolean,
       default:false
+    },
+    is_deleted:{
+      type:Boolean,
+      default:false
     }
   },
   {
     timestamps: true,
   }
 );
+
+messageSchema.index({ conversation_id: 1, createdAt: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 
