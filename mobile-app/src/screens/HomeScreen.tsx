@@ -14,6 +14,8 @@ import {
   Alert,
   Modal,
   Linking,
+  StatusBar,
+  BackHandler,
 } from 'react-native';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -49,6 +51,15 @@ export default function HomeScreen({ route, navigation }: any) {
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
 
+  // Local Conversation Search Query
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Add User / Search User Modal state
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearchingUser, setIsSearchingUser] = useState(false);
+
   // Selected Attachment State (Image or Document)
   const [selectedAttachment, setSelectedAttachment] = useState<{
     uri: string;
@@ -64,6 +75,32 @@ export default function HomeScreen({ route, navigation }: any) {
   const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
+
+  // 1. Hardware Back Button Listener (Messenger Style)
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedFullImage) {
+        setSelectedFullImage(null);
+        return true; // handled
+      }
+      if (showAddUserModal) {
+        setShowAddUserModal(false);
+        return true; // handled
+      }
+      if (selectedCon) {
+        setSelectedCon(null);
+        return true; // handled - go back to conversation list!
+      }
+      return false; // let default hardware back action happen (exit app)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      onBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [selectedCon, selectedFullImage, showAddUserModal]);
 
   useEffect(() => {
     fetchConversations();
@@ -111,6 +148,7 @@ export default function HomeScreen({ route, navigation }: any) {
           },
         ]);
       }
+      fetchConversations();
     });
 
     socket.on('message_deleted', (data: any) => {
@@ -135,6 +173,69 @@ export default function HomeScreen({ route, navigation }: any) {
       socket.off('message_edited');
     };
   }, [selectedCon]);
+
+  // Search User Handler
+  const handleSearchUsers = async (query: string) => {
+    setUserSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearchingUser(true);
+    try {
+      const response = await axios.post(
+        `${API_URL}/chats/adduser`,
+        { name: query },
+        { withCredentials: true }
+      );
+      if (response.status === 200) {
+        setSearchResults(response.data || []);
+      }
+    } catch (error) {
+      console.log('Search user error:', error);
+    } finally {
+      setIsSearchingUser(false);
+    }
+  };
+
+  // Add / Start Conversation with user
+  const handleAddUserConversation = async (targetUser: any) => {
+    try {
+      await axios.post(
+        `${API_URL}/chats/chatconversion`,
+        { _id: targetUser._id },
+        { withCredentials: true }
+      );
+      await fetchConversations();
+      setShowAddUserModal(false);
+      setUserSearchQuery('');
+      setSearchResults([]);
+
+      // Select new conversation
+      const partnerName = targetUser.name;
+      const match = conversations.find(
+        (c) =>
+          c.participant?.name === partnerName || c.creator?.name === partnerName
+      );
+      if (match) {
+        selectConversation(match);
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 400) {
+        setShowAddUserModal(false);
+        // Find existing conversation and open
+        const partnerName = targetUser.name;
+        const match = conversations.find(
+          (c) =>
+            c.participant?.name === partnerName || c.creator?.name === partnerName
+        );
+        if (match) selectConversation(match);
+      } else {
+        Alert.alert('Notice', 'Could not add conversation');
+      }
+    }
+  };
 
   // Pick Image (compressed down to ~200-300KB)
   const pickImage = async () => {
@@ -310,9 +411,18 @@ export default function HomeScreen({ route, navigation }: any) {
     Alert.alert('Message Options', 'Choose an action', options);
   };
 
+  // Filter conversations locally
+  const filteredConversations = conversations.filter((item) => {
+    const partnerName =
+      item.participant?.name || item.creator?.name || '';
+    return partnerName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      <StatusBar backgroundColor="#2563EB" barStyle="light-content" />
+
+      {/* Clean Top Header (Safe area padded) */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Image
@@ -330,17 +440,53 @@ export default function HomeScreen({ route, navigation }: any) {
       </View>
 
       {!selectedCon ? (
-        // Conversation List
+        // Conversation List View
         <View style={styles.conListContainer}>
-          <Text style={styles.sectionTitle}>Conversations</Text>
-          {conversations.length === 0 ? (
+          {/* Action Row: Title + Add User Button */}
+          <View style={styles.topActionRow}>
+            <Text style={styles.sectionTitle}>Chats</Text>
+            <TouchableOpacity
+              style={styles.addUserBtn}
+              onPress={() => setShowAddUserModal(true)}
+            >
+              <Text style={styles.addUserBtnText}>+ Add User</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Bar */}
+          <View style={styles.searchBarContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchBarInput}
+              placeholder="Search conversations..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94A3B8"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Text style={styles.clearSearchText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {filteredConversations.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No conversations found</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery ? 'No matching user found' : 'No conversations yet'}
+              </Text>
+              <TouchableOpacity
+                style={styles.startNewChatBtn}
+                onPress={() => setShowAddUserModal(true)}
+              >
+                <Text style={styles.startNewChatText}>🔍 Search & Add User</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <FlatList
-              data={conversations}
+              data={filteredConversations}
               keyExtractor={(item) => item._id}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.conItem}
@@ -356,7 +502,7 @@ export default function HomeScreen({ route, navigation }: any) {
                       {item.participant?.name || item.creator?.name}
                     </Text>
                     <Text style={styles.lastMsg} numberOfLines={1}>
-                      {item.lastMessageText || 'Tap to chat'}
+                      {item.lastMessageText || 'Tap to start chatting'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -372,10 +518,13 @@ export default function HomeScreen({ route, navigation }: any) {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           <View style={styles.chatHeader}>
-            <TouchableOpacity onPress={() => setSelectedCon(null)}>
+            <TouchableOpacity
+              style={styles.backBtnTouch}
+              onPress={() => setSelectedCon(null)}
+            >
               <Text style={styles.backText}>‹ Back</Text>
             </TouchableOpacity>
-            <Text style={styles.chatHeaderName}>
+            <Text style={styles.chatHeaderName} numberOfLines={1}>
               {selectedCon.participant?.name || selectedCon.creator?.name}
             </Text>
           </View>
@@ -503,6 +652,7 @@ export default function HomeScreen({ route, navigation }: any) {
               placeholder="Type a message..."
               value={inputText}
               onChangeText={setInputText}
+              multiline
             />
             <TouchableOpacity
               style={styles.sendBtn}
@@ -518,6 +668,76 @@ export default function HomeScreen({ route, navigation }: any) {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Add User / Search User Modal (Web style) */}
+      <Modal
+        visible={showAddUserModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddUserModal(false)}
+      >
+        <View style={styles.addUserModalOverlay}>
+          <View style={styles.addUserModalCard}>
+            <View style={styles.addUserModalHeader}>
+              <Text style={styles.addUserModalTitle}>Search & Add User</Text>
+              <TouchableOpacity
+                onPress={() => setShowAddUserModal(false)}
+                style={styles.addUserCloseBtn}
+              >
+                <Text style={styles.addUserCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.addUserSearchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.addUserSearchInput}
+                placeholder="Type name or email to search..."
+                value={userSearchQuery}
+                onChangeText={handleSearchUsers}
+                placeholderTextColor="#94A3B8"
+                autoFocus
+              />
+            </View>
+
+            {isSearchingUser ? (
+              <View style={styles.modalLoadingBox}>
+                <ActivityIndicator size="small" color="#2563EB" />
+                <Text style={styles.modalLoadingText}>Searching users...</Text>
+              </View>
+            ) : searchResults.length === 0 ? (
+              <View style={styles.modalEmptyBox}>
+                <Text style={styles.modalEmptyText}>
+                  {userSearchQuery ? 'No user found' : 'Enter name or email above'}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={searchResults}
+                keyExtractor={(item) => item._id}
+                style={{ maxHeight: 280 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.userResultItem}
+                    onPress={() => handleAddUserConversation(item)}
+                  >
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarText}>
+                        {(item.name || 'U')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.userResultName}>{item.name}</Text>
+                      <Text style={styles.userResultEmail}>{item.email}</Text>
+                    </View>
+                    <Text style={styles.chatStartTag}>+ Chat</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Fullscreen Image Lightbox Modal */}
       {selectedFullImage ? (
@@ -594,6 +814,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 28 : 0,
   },
   header: {
     flexDirection: 'row',
@@ -602,41 +823,90 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#2563EB',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerLogo: {
-    width: 28,
-    height: 28,
-    marginRight: 8,
+    width: 32,
+    height: 32,
+    marginRight: 10,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   logoutBtn: {
     backgroundColor: '#EF4444',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
   },
   logoutText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: 'bold',
     fontSize: 13,
   },
   conListContainer: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  topActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 12,
+    color: '#0F172A',
+  },
+  addUserBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addUserBtnText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchBarInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  clearSearchText: {
+    color: '#94A3B8',
+    fontWeight: 'bold',
+    fontSize: 16,
+    paddingHorizontal: 4,
   },
   emptyBox: {
     flex: 1,
@@ -644,16 +914,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 16,
+    marginBottom: 12,
+  },
+  startNewChatBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  startNewChatText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   conItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: 16,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -661,10 +943,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#3B82F6',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -696,16 +978,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  backBtnTouch: {
+    paddingRight: 12,
+  },
   backText: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#2563EB',
     fontWeight: 'bold',
-    marginRight: 12,
   },
   chatHeaderName: {
     fontSize: 17,
     fontWeight: 'bold',
     color: '#0F172A',
+    flex: 1,
   },
   msgBubble: {
     maxWidth: '78%',
@@ -828,11 +1113,12 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
   },
   attachBtn: {
     padding: 6,
@@ -848,6 +1134,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 15,
     marginHorizontal: 4,
+    maxHeight: 100,
   },
   sendBtn: {
     backgroundColor: '#2563EB',
@@ -859,6 +1146,99 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  addUserModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  addUserModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  addUserModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addUserModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0F172A',
+  },
+  addUserCloseBtn: {
+    backgroundColor: '#E2E8F0',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addUserCloseText: {
+    color: '#64748B',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  addUserSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+  },
+  addUserSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  modalLoadingBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalLoadingText: {
+    marginLeft: 8,
+    color: '#64748B',
+  },
+  modalEmptyBox: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalEmptyText: {
+    color: '#94A3B8',
+  },
+  userResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  userResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  userResultEmail: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  chatStartTag: {
+    backgroundColor: '#DBEAFE',
+    color: '#2563EB',
+    fontWeight: 'bold',
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   modalOverlay: {
     flex: 1,
