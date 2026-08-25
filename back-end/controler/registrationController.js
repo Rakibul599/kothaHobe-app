@@ -65,6 +65,10 @@ KothaHobeApp
       name: result.name,
       email: result.email,
     };
+    if (process.env.OTP_DEBUG === "true" || process.env.OTP_DEBUG === true) {
+      finalrespose.code = code;
+      finalrespose.otpDebug = true;
+    }
     res.status(200).send(finalrespose);
   } catch (error) {
     res.status(500).send(error.message);
