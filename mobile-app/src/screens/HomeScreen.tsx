@@ -88,6 +88,17 @@ export default function HomeScreen({ route, navigation }: any) {
 
   const flatListRef = useRef<FlatList>(null);
 
+  // Helper to extract partner name and avatar photo
+  const getPartnerInfo = (item: any) => {
+    if (!item) return { name: 'User', avatarUrl: null };
+    const isCreator = item.creator?.id === user?.userid;
+    const partner = isCreator ? item.participant : item.creator;
+    const name = partner?.name || item.participant?.name || item.creator?.name || 'User';
+    const rawAvatar = partner?.avatar || partner?.avater || item.participant?.avatar || item.creator?.avatar;
+    const avatarUrl = rawAvatar ? (rawAvatar.startsWith('http') ? rawAvatar : `${API_URL}/uploads/avatars/${rawAvatar}`) : null;
+    return { name, avatarUrl };
+  };
+
   // Setup Notification Permissions & Channels
   useEffect(() => {
     const setupNotifications = async () => {
@@ -299,7 +310,7 @@ export default function HomeScreen({ route, navigation }: any) {
     try {
       await axios.post(
         `${API_URL}/chats/chatconversion`,
-        { _id: targetUser._id },
+        { _id: targetUser._id, name: targetUser.name, avater: targetUser.avatar || targetUser.avater },
         { withCredentials: true }
       );
       await fetchConversations();
@@ -508,265 +519,298 @@ export default function HomeScreen({ route, navigation }: any) {
 
   // Filter conversations locally
   const filteredConversations = conversations.filter((item) => {
-    const partnerName =
-      item.participant?.name || item.creator?.name || '';
-    return partnerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const { name } = getPartnerInfo(item);
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#2563EB" barStyle="light-content" />
+  const selectedPartner = getPartnerInfo(selectedCon);
 
-      {/* Clean Top Header (Safe area padded) */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.headerLogo}
-          />
-          <Text style={styles.headerTitle}>KothaHobe!</Text>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar backgroundColor="#2563EB" barStyle="light-content" translucent={false} />
+
+      {/* Clean Blue Top Header (Safe area padded) */}
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.logoBadgeContainer}>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.headerTitle}>KothaHobe!</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogoutPrompt}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogoutPrompt}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
       </View>
 
-      {!selectedCon ? (
-        // Conversation List View
-        <View style={styles.conListContainer}>
-          {/* Action Row: Title + Add User Button */}
-          <View style={styles.topActionRow}>
-            <Text style={styles.sectionTitle}>Chats</Text>
-            <TouchableOpacity
-              style={styles.addUserBtn}
-              onPress={() => setShowAddUserModal(true)}
-            >
-              <Text style={styles.addUserBtnText}>+ Add User</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
-          <View style={styles.searchBarContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              style={styles.searchBarInput}
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#94A3B8"
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Text style={styles.clearSearchText}>✕</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {filteredConversations.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>
-                {searchQuery ? 'No matching user found' : 'No conversations yet'}
-              </Text>
+      <View style={styles.mainContent}>
+        {!selectedCon ? (
+          // Conversation List View
+          <View style={styles.conListContainer}>
+            {/* Action Row: Title + Add User Button */}
+            <View style={styles.topActionRow}>
+              <Text style={styles.sectionTitle}>Chats</Text>
               <TouchableOpacity
-                style={styles.startNewChatBtn}
+                style={styles.addUserBtn}
                 onPress={() => setShowAddUserModal(true)}
               >
-                <Text style={styles.startNewChatText}>🔍 Search & Add User</Text>
+                <Text style={styles.addUserBtnText}>+ Add User</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={filteredConversations}
-              keyExtractor={(item) => item._id}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.conItem}
-                  onPress={() => selectConversation(item)}
-                >
-                  <View style={styles.avatarCircle}>
-                    <Text style={styles.avatarText}>
-                      {(item.participant?.name || item.creator?.name || 'U')[0].toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={styles.conTextContainer}>
-                    <View style={styles.conNameRow}>
-                      <Text style={styles.conName}>
-                        {item.participant?.name || item.creator?.name}
-                      </Text>
-                      {item.unreadCount > 0 ? (
-                        <View style={styles.unreadBadge}>
-                          <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.lastMsg} numberOfLines={1}>
-                      {item.lastMessageText || 'Tap to start chatting'}
-                    </Text>
-                  </View>
+
+            {/* Search Bar */}
+            <View style={styles.searchBarContainer}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchBarInput}
+                placeholder="Search conversations..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#94A3B8"
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Text style={styles.clearSearchText}>✕</Text>
                 </TouchableOpacity>
-              )}
-            />
-          )}
-        </View>
-      ) : (
-        // Chat View
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          <View style={styles.chatHeader}>
-            <TouchableOpacity
-              style={styles.backBtnTouch}
-              onPress={() => setSelectedCon(null)}
-            >
-              <Text style={styles.backText}>‹ Back</Text>
-            </TouchableOpacity>
-            <Text style={styles.chatHeaderName} numberOfLines={1}>
-              {selectedCon.participant?.name || selectedCon.creator?.name}
-            </Text>
-          </View>
+              ) : null}
+            </View>
 
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item, index) => item._id || index.toString()}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            renderItem={({ item }) => {
-              const isMyMsg = item.sender?.id === user?.userid;
-              const isDeleted = item.is_deleted;
-
-              return (
+            {filteredConversations.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No matching user found' : 'No conversations yet'}
+                </Text>
                 <TouchableOpacity
-                  activeOpacity={0.9}
-                  onLongPress={() => handleMessagePress(item)}
-                  style={[
-                    styles.msgBubble,
-                    isDeleted
-                      ? styles.deletedBubble
-                      : isMyMsg
-                      ? styles.myMsg
-                      : styles.theirMsg,
-                    isDeleted && isMyMsg ? { alignSelf: 'flex-end' } : null,
-                  ]}
+                  style={styles.startNewChatBtn}
+                  onPress={() => setShowAddUserModal(true)}
                 >
-                  {isDeleted ? (
-                    <Text style={styles.deletedText}>
-                      🚫 {isMyMsg ? 'You unsent a message' : 'Unsent a message'}
-                    </Text>
-                  ) : (
-                    <>
-                      {item.text ? (
-                        <Text style={isMyMsg ? styles.myMsgText : styles.theirMsgText}>
-                          {item.text}
-                        </Text>
-                      ) : null}
-
-                      {item.attachment && item.attachment.length > 0 ? (
-                        <View style={{ marginTop: 4 }}>
-                          {item.attachment.map((att: string, idx: number) => {
-                            const fileUrl = att.startsWith('http')
-                              ? att
-                              : `${API_URL}/uploads/avatars/${att}`;
-
-                            if (isImageFile(att)) {
-                              return (
-                                <TouchableOpacity
-                                  key={idx}
-                                  activeOpacity={0.9}
-                                  onPress={() => setSelectedFullImage(fileUrl)}
-                                >
-                                  <Image
-                                    source={{ uri: fileUrl }}
-                                    style={styles.msgImage}
-                                    resizeMode="cover"
-                                  />
-                                </TouchableOpacity>
-                              );
-                            } else {
-                              return (
-                                <TouchableOpacity
-                                  key={idx}
-                                  style={styles.fileBubble}
-                                  onPress={() => Linking.openURL(fileUrl)}
-                                >
-                                  <Text style={styles.fileIcon}>📄</Text>
-                                  <Text style={styles.fileNameText} numberOfLines={1}>
-                                    {att.split('/').pop()}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            }
-                          })}
-                        </View>
-                      ) : null}
-                    </>
-                  )}
+                  <Text style={styles.startNewChatText}>🔍 Search & Add User</Text>
                 </TouchableOpacity>
-              );
-            }}
-          />
-
-          {/* Attachment Preview Bar */}
-          {selectedAttachment ? (
-            <View style={styles.previewBar}>
-              <View style={styles.previewContent}>
-                {selectedAttachment.isImage ? (
-                  <Image
-                    source={{ uri: selectedAttachment.uri }}
-                    style={styles.previewThumb}
-                  />
-                ) : (
-                  <View style={styles.docIconBox}>
-                    <Text style={styles.docIconText}>📄</Text>
-                  </View>
-                )}
-                <View style={styles.previewTextContainer}>
-                  <Text style={styles.previewName} numberOfLines={1}>
-                    {selectedAttachment.name}
-                  </Text>
-                  <Text style={styles.previewSub}>Ready to send</Text>
-                </View>
               </View>
+            ) : (
+              <FlatList
+                data={filteredConversations}
+                keyExtractor={(item) => item._id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => {
+                  const { name, avatarUrl } = getPartnerInfo(item);
+
+                  return (
+                    <TouchableOpacity
+                      style={styles.conItem}
+                      onPress={() => selectConversation(item)}
+                    >
+                      {avatarUrl ? (
+                        <Image
+                          source={{ uri: avatarUrl }}
+                          style={styles.avatarImage}
+                        />
+                      ) : (
+                        <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarText}>
+                            {(name || 'U')[0].toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+
+                      <View style={styles.conTextContainer}>
+                        <View style={styles.conNameRow}>
+                          <Text style={styles.conName}>{name}</Text>
+                          {item.unreadCount > 0 ? (
+                            <View style={styles.unreadBadge}>
+                              <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text style={styles.lastMsg} numberOfLines={1}>
+                          {item.lastMessageText || 'Tap to start chatting'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+          </View>
+        ) : (
+          // Chat View
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            {/* Chat Room Header with User Profile Picture */}
+            <View style={styles.chatHeader}>
               <TouchableOpacity
-                style={styles.removePreviewBtn}
-                onPress={() => setSelectedAttachment(null)}
+                style={styles.backBtnTouch}
+                onPress={() => setSelectedCon(null)}
               >
-                <Text style={styles.removePreviewText}>✕</Text>
+                <Text style={styles.backText}>‹ Back</Text>
+              </TouchableOpacity>
+
+              {selectedPartner.avatarUrl ? (
+                <Image
+                  source={{ uri: selectedPartner.avatarUrl }}
+                  style={styles.chatHeaderAvatar}
+                />
+              ) : (
+                <View style={styles.chatHeaderAvatarCircle}>
+                  <Text style={styles.chatHeaderAvatarText}>
+                    {(selectedPartner.name || 'U')[0].toUpperCase()}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={styles.chatHeaderName} numberOfLines={1}>
+                {selectedPartner.name}
+              </Text>
+            </View>
+
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item, index) => item._id || index.toString()}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              renderItem={({ item }) => {
+                const isMyMsg = item.sender?.id === user?.userid;
+                const isDeleted = item.is_deleted;
+
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onLongPress={() => handleMessagePress(item)}
+                    style={[
+                      styles.msgBubble,
+                      isDeleted
+                        ? styles.deletedBubble
+                        : isMyMsg
+                        ? styles.myMsg
+                        : styles.theirMsg,
+                      isDeleted && isMyMsg ? { alignSelf: 'flex-end' } : null,
+                    ]}
+                  >
+                    {isDeleted ? (
+                      <Text style={styles.deletedText}>
+                        🚫 {isMyMsg ? 'You unsent a message' : 'Unsent a message'}
+                      </Text>
+                    ) : (
+                      <>
+                        {item.text ? (
+                          <Text style={isMyMsg ? styles.myMsgText : styles.theirMsgText}>
+                            {item.text}
+                          </Text>
+                        ) : null}
+
+                        {item.attachment && item.attachment.length > 0 ? (
+                          <View style={{ marginTop: 4 }}>
+                            {item.attachment.map((att: string, idx: number) => {
+                              const fileUrl = att.startsWith('http')
+                                ? att
+                                : `${API_URL}/uploads/avatars/${att}`;
+
+                              if (isImageFile(att)) {
+                                return (
+                                  <TouchableOpacity
+                                    key={idx}
+                                    activeOpacity={0.9}
+                                    onPress={() => setSelectedFullImage(fileUrl)}
+                                  >
+                                    <Image
+                                      source={{ uri: fileUrl }}
+                                      style={styles.msgImage}
+                                      resizeMode="cover"
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              } else {
+                                return (
+                                  <TouchableOpacity
+                                    key={idx}
+                                    style={styles.fileBubble}
+                                    onPress={() => Linking.openURL(fileUrl)}
+                                  >
+                                    <Text style={styles.fileIcon}>📄</Text>
+                                    <Text style={styles.fileNameText} numberOfLines={1}>
+                                      {att.split('/').pop()}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              }
+                            })}
+                          </View>
+                        ) : null}
+                      </>
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+
+            {/* Attachment Preview Bar */}
+            {selectedAttachment ? (
+              <View style={styles.previewBar}>
+                <View style={styles.previewContent}>
+                  {selectedAttachment.isImage ? (
+                    <Image
+                      source={{ uri: selectedAttachment.uri }}
+                      style={styles.previewThumb}
+                    />
+                  ) : (
+                    <View style={styles.docIconBox}>
+                      <Text style={styles.docIconText}>📄</Text>
+                    </View>
+                  )}
+                  <View style={styles.previewTextContainer}>
+                    <Text style={styles.previewName} numberOfLines={1}>
+                      {selectedAttachment.name}
+                    </Text>
+                    <Text style={styles.previewSub}>Ready to send</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.removePreviewBtn}
+                  onPress={() => setSelectedAttachment(null)}
+                >
+                  <Text style={styles.removePreviewText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {/* Input Bar */}
+            <View style={styles.inputBar}>
+              <TouchableOpacity style={styles.attachBtn} onPress={pickImage}>
+                <Text style={styles.attachIcon}>📷</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.attachBtn} onPress={pickDocument}>
+                <Text style={styles.attachIcon}>📁</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type a message..."
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.sendBtn}
+                onPress={handleSend}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.sendBtnText}>Send</Text>
+                )}
               </TouchableOpacity>
             </View>
-          ) : null}
-
-          {/* Input Bar */}
-          <View style={styles.inputBar}>
-            <TouchableOpacity style={styles.attachBtn} onPress={pickImage}>
-              <Text style={styles.attachIcon}>📷</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.attachBtn} onPress={pickDocument}>
-              <Text style={styles.attachIcon}>📁</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Type a message..."
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <TouchableOpacity
-              style={styles.sendBtn}
-              onPress={handleSend}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.sendBtnText}>Send</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      )}
+          </KeyboardAvoidingView>
+        )}
+      </View>
 
       {/* Add User / Search User Modal (Web style) */}
       <Modal
@@ -815,23 +859,35 @@ export default function HomeScreen({ route, navigation }: any) {
                 data={searchResults}
                 keyExtractor={(item) => item._id}
                 style={{ maxHeight: 280 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.userResultItem}
-                    onPress={() => handleAddUserConversation(item)}
-                  >
-                    <View style={styles.avatarCircle}>
-                      <Text style={styles.avatarText}>
-                        {(item.name || 'U')[0].toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.userResultName}>{item.name}</Text>
-                      <Text style={styles.userResultEmail}>{item.email}</Text>
-                    </View>
-                    <Text style={styles.chatStartTag}>+ Chat</Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const avatarUrl = item.avatar || item.avater
+                    ? (item.avatar || item.avater).startsWith('http')
+                      ? (item.avatar || item.avater)
+                      : `${API_URL}/uploads/avatars/${item.avatar || item.avater}`
+                    : null;
+
+                  return (
+                    <TouchableOpacity
+                      style={styles.userResultItem}
+                      onPress={() => handleAddUserConversation(item)}
+                    >
+                      {avatarUrl ? (
+                        <Image source={{ uri: avatarUrl }} style={styles.modalAvatarImage} />
+                      ) : (
+                        <View style={styles.avatarCircle}>
+                          <Text style={styles.avatarText}>
+                            {(item.name || 'U')[0].toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.userResultName}>{item.name}</Text>
+                        <Text style={styles.userResultEmail}>{item.email}</Text>
+                      </View>
+                      <Text style={styles.chatStartTag}>+ Chat</Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
             )}
           </View>
@@ -910,10 +966,17 @@ export default function HomeScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#2563EB', // Top status bar safe area color
+  },
+  headerContainer: {
+    backgroundColor: '#2563EB',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 0,
+  },
+  mainContent: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 28 : 0,
   },
   header: {
     flexDirection: 'row',
@@ -932,10 +995,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerLogo: {
-    width: 32,
-    height: 32,
+  logoBadgeContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 10,
+  },
+  headerLogo: {
+    width: 24,
+    height: 24,
   },
   headerTitle: {
     fontSize: 22,
@@ -1041,6 +1112,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  avatarImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginRight: 12,
+    backgroundColor: '#E2E8F0',
+  },
   avatarCircle: {
     width: 46,
     height: 46,
@@ -1102,6 +1180,27 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#2563EB',
     fontWeight: 'bold',
+  },
+  chatHeaderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+    backgroundColor: '#E2E8F0',
+  },
+  chatHeaderAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2563EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  chatHeaderAvatarText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   chatHeaderName: {
     fontSize: 17,
@@ -1338,6 +1437,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  modalAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: '#E2E8F0',
   },
   userResultName: {
     fontSize: 15,
