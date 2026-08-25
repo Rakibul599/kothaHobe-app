@@ -41,6 +41,22 @@ const socket = io(API_URL, {
   withCredentials: true,
 });
 
+// Helper to construct accurate image URLs for avatars & attachments
+const getImageUrl = (pathOrUrl?: string) => {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('data:image/')) {
+    return pathOrUrl;
+  }
+  const cleanPath = pathOrUrl.replace(/^\/+/, '');
+  if (cleanPath.startsWith('uploads/')) {
+    return `${API_URL}/${cleanPath}`;
+  }
+  if (cleanPath.startsWith('public/')) {
+    return `${API_URL}/${cleanPath.replace(/^public\//, '')}`;
+  }
+  return `${API_URL}/uploads/avatars/${cleanPath}`;
+};
+
 const isImageFile = (filenameOrUrl: string) => {
   if (!filenameOrUrl) return false;
   const lower = filenameOrUrl.toLowerCase();
@@ -58,6 +74,8 @@ const isImageFile = (filenameOrUrl: string) => {
 
 export default function HomeScreen({ route, navigation }: any) {
   const { user } = route.params || {};
+  const currentUserId = user?.userid || user?.id || user?._id;
+
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedCon, setSelectedCon] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -91,11 +109,11 @@ export default function HomeScreen({ route, navigation }: any) {
   // Helper to extract partner name and avatar photo
   const getPartnerInfo = (item: any) => {
     if (!item) return { name: 'User', avatarUrl: null };
-    const isCreator = item.creator?.id === user?.userid;
+    const isCreator = String(item.creator?.id) === String(currentUserId);
     const partner = isCreator ? item.participant : item.creator;
     const name = partner?.name || item.participant?.name || item.creator?.name || 'User';
     const rawAvatar = partner?.avatar || partner?.avater || item.participant?.avatar || item.creator?.avatar;
-    const avatarUrl = rawAvatar ? (rawAvatar.startsWith('http') ? rawAvatar : `${API_URL}/uploads/avatars/${rawAvatar}`) : null;
+    const avatarUrl = getImageUrl(rawAvatar);
     return { name, avatarUrl };
   };
 
@@ -121,22 +139,22 @@ export default function HomeScreen({ route, navigation }: any) {
     setupNotifications();
   }, []);
 
-  // 1. Hardware Back Button Listener (Messenger Style)
+  // Hardware Back Button Listener (Messenger Style)
   useEffect(() => {
     const onBackPress = () => {
       if (selectedFullImage) {
         setSelectedFullImage(null);
-        return true; // handled
+        return true;
       }
       if (showAddUserModal) {
         setShowAddUserModal(false);
-        return true; // handled
+        return true;
       }
       if (selectedCon) {
         setSelectedCon(null);
-        return true; // handled - go back to conversation list!
+        return true; // Go back to conversation list!
       }
-      return false; // let default hardware back action happen (exit app)
+      return false;
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -196,7 +214,8 @@ export default function HomeScreen({ route, navigation }: any) {
   useEffect(() => {
     socket.on('new_message', async (data: any) => {
       const isCurrentChat = selectedCon && data.message.conversation_id === selectedCon._id;
-      const isSenderMe = data.message.sender?.id === user?.userid;
+      const senderId = data.message.sender?.id || data.message.sender;
+      const isSenderMe = String(senderId) === String(currentUserId);
 
       if (isCurrentChat) {
         setMessages((prev) => [
@@ -206,7 +225,7 @@ export default function HomeScreen({ route, navigation }: any) {
             text: data.message.message,
             attachment: data.message.attachment,
             is_deleted: data.message.is_deleted || false,
-            sender: { id: data.message.sender.id },
+            sender: { id: senderId },
           },
         ]);
       }
@@ -257,7 +276,7 @@ export default function HomeScreen({ route, navigation }: any) {
       socket.off('message_deleted');
       socket.off('message_edited');
     };
-  }, [selectedCon, user]);
+  }, [selectedCon, currentUserId]);
 
   // Logout confirmation prompt
   const handleLogoutPrompt = () => {
@@ -497,7 +516,8 @@ export default function HomeScreen({ route, navigation }: any) {
 
   // Long press / tap options on message
   const handleMessagePress = (item: any) => {
-    const isMyMsg = item.sender?.id === user?.userid;
+    const senderId = item.sender?.id || item.sender;
+    const isMyMsg = String(senderId) === String(currentUserId);
     if (!isMyMsg || !item._id || item.is_deleted) return;
 
     const options = [];
@@ -529,7 +549,7 @@ export default function HomeScreen({ route, navigation }: any) {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar backgroundColor="#2563EB" barStyle="light-content" translucent={false} />
 
-      {/* Clean Blue Top Header (Safe area padded) */}
+      {/* Clean Blue Top Header */}
       <View style={styles.headerContainer}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -550,7 +570,7 @@ export default function HomeScreen({ route, navigation }: any) {
 
       <View style={styles.mainContent}>
         {!selectedCon ? (
-          // Conversation List View
+          // Conversation List View with Responsive Scroll
           <View style={styles.conListContainer}>
             {/* Action Row: Title + Add User Button */}
             <View style={styles.topActionRow}>
@@ -596,7 +616,8 @@ export default function HomeScreen({ route, navigation }: any) {
               <FlatList
                 data={filteredConversations}
                 keyExtractor={(item) => item._id}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => {
                   const { name, avatarUrl } = getPartnerInfo(item);
 
@@ -638,13 +659,13 @@ export default function HomeScreen({ route, navigation }: any) {
             )}
           </View>
         ) : (
-          // Chat View
+          // Chat View with Responsive Keyboard avoiding & Scroll
           <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
           >
-            {/* Chat Room Header with User Profile Picture */}
+            {/* Chat Room Header */}
             <View style={styles.chatHeader}>
               <TouchableOpacity
                 style={styles.backBtnTouch}
@@ -671,13 +692,18 @@ export default function HomeScreen({ route, navigation }: any) {
               </Text>
             </View>
 
+            {/* Chat Messages List */}
             <FlatList
               ref={flatListRef}
               data={messages}
               keyExtractor={(item, index) => item._id || index.toString()}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingVertical: 10 }}
               onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
               renderItem={({ item }) => {
-                const isMyMsg = item.sender?.id === user?.userid;
+                const senderId = item.sender?.id || item.sender;
+                const isMyMsg = String(senderId) === String(currentUserId);
                 const isDeleted = item.is_deleted;
 
                 return (
@@ -691,7 +717,6 @@ export default function HomeScreen({ route, navigation }: any) {
                         : isMyMsg
                         ? styles.myMsg
                         : styles.theirMsg,
-                      isDeleted && isMyMsg ? { alignSelf: 'flex-end' } : null,
                     ]}
                   >
                     {isDeleted ? (
@@ -707,11 +732,9 @@ export default function HomeScreen({ route, navigation }: any) {
                         ) : null}
 
                         {item.attachment && item.attachment.length > 0 ? (
-                          <View style={{ marginTop: 4 }}>
+                          <View style={{ marginTop: 6 }}>
                             {item.attachment.map((att: string, idx: number) => {
-                              const fileUrl = att.startsWith('http')
-                                ? att
-                                : `${API_URL}/uploads/avatars/${att}`;
+                              const fileUrl = getImageUrl(att);
 
                               if (isImageFile(att)) {
                                 return (
@@ -721,7 +744,7 @@ export default function HomeScreen({ route, navigation }: any) {
                                     onPress={() => setSelectedFullImage(fileUrl)}
                                   >
                                     <Image
-                                      source={{ uri: fileUrl }}
+                                      source={{ uri: fileUrl || '' }}
                                       style={styles.msgImage}
                                       resizeMode="cover"
                                     />
@@ -732,7 +755,7 @@ export default function HomeScreen({ route, navigation }: any) {
                                   <TouchableOpacity
                                     key={idx}
                                     style={styles.fileBubble}
-                                    onPress={() => Linking.openURL(fileUrl)}
+                                    onPress={() => fileUrl && Linking.openURL(fileUrl)}
                                   >
                                     <Text style={styles.fileIcon}>📄</Text>
                                     <Text style={styles.fileNameText} numberOfLines={1}>
@@ -795,6 +818,7 @@ export default function HomeScreen({ route, navigation }: any) {
                 value={inputText}
                 onChangeText={setInputText}
                 multiline
+                placeholderTextColor="#94A3B8"
               />
               <TouchableOpacity
                 style={styles.sendBtn}
@@ -860,11 +884,7 @@ export default function HomeScreen({ route, navigation }: any) {
                 keyExtractor={(item) => item._id}
                 style={{ maxHeight: 280 }}
                 renderItem={({ item }) => {
-                  const avatarUrl = item.avatar || item.avater
-                    ? (item.avatar || item.avater).startsWith('http')
-                      ? (item.avatar || item.avater)
-                      : `${API_URL}/uploads/avatars/${item.avatar || item.avater}`
-                    : null;
+                  const avatarUrl = getImageUrl(item.avatar || item.avater);
 
                   return (
                     <TouchableOpacity
@@ -968,7 +988,7 @@ export default function HomeScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2563EB', // Top status bar safe area color
+    backgroundColor: '#2563EB',
   },
   headerContainer: {
     backgroundColor: '#2563EB',
@@ -1210,18 +1230,21 @@ const styles = StyleSheet.create({
   },
   msgBubble: {
     maxWidth: '78%',
-    padding: 10,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
     marginVertical: 4,
     marginHorizontal: 12,
   },
   myMsg: {
     backgroundColor: '#2563EB',
     alignSelf: 'flex-end',
+    borderBottomRightRadius: 4,
   },
   theirMsg: {
     backgroundColor: '#E2E8F0',
     alignSelf: 'flex-start',
+    borderBottomLeftRadius: 4,
   },
   deletedBubble: {
     backgroundColor: '#F1F5F9',
@@ -1237,16 +1260,19 @@ const styles = StyleSheet.create({
   myMsgText: {
     color: '#FFFFFF',
     fontSize: 15,
+    lineHeight: 20,
   },
   theirMsgText: {
     color: '#0F172A',
     fontSize: 15,
+    lineHeight: 20,
   },
   msgImage: {
     width: 220,
     height: 160,
     borderRadius: 12,
-    marginTop: 6,
+    marginTop: 4,
+    backgroundColor: '#CBD5E1',
   },
   fileBubble: {
     flexDirection: 'row',
@@ -1351,6 +1377,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginHorizontal: 4,
     maxHeight: 100,
+    color: '#0F172A',
   },
   sendBtn: {
     backgroundColor: '#2563EB',
